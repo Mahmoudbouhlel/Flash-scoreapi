@@ -25,20 +25,24 @@ Write-Host "      -> Node.js detected: $nodeVersion" -ForegroundColor Green
 # 2. Check Python Installation
 Write-Host "[2/4] Checking Python environment..." -ForegroundColor Header
 $pythonCmd = $null
-if (Get-Command python3 -ErrorAction SilentlyContinue) {
-    $pythonCmd = "python3"
+if (Test-Path "C:\Python313\python.exe") {
+    $pythonCmd = "C:\Python313\python.exe"
+} elseif (Get-Command py -ErrorAction SilentlyContinue) {
+    $pythonCmd = "py"
 } elseif (Get-Command python -ErrorAction SilentlyContinue) {
     $pythonCmd = "python"
-} elseif (Get-Command py -ErrorAction SilentlyContinue) {
-    $pythonCmd = "py -3"
+} elseif (Get-Command python3 -ErrorAction SilentlyContinue) {
+    $pythonCmd = "python3"
 }
 
 if (-not $pythonCmd) {
     Write-Host "[WARNING] Python is not installed or not found in PATH." -ForegroundColor Yellow
-    Write-Host "          Live Python Bridge features require Python 3.9+." -ForegroundColor DarkYellow
+    Write-Host "          Live Python Bridge features will fall back to direct JS Flashscore scraper." -ForegroundColor DarkYellow
 } else {
+    $env:PYTHON = $pythonCmd
+    $env:PYTHON_EXECUTABLE = $pythonCmd
     $pyVersion = & Invoke-Expression "$pythonCmd --version"
-    Write-Host "      -> Python detected: $pyVersion" -ForegroundColor Green
+    Write-Host "      -> Python detected: $pyVersion ($pythonCmd)" -ForegroundColor Green
 }
 
 # 3. Check and Install Node Dependencies if needed

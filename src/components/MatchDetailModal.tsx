@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Copy, Check, ExternalLink, Activity, Clock, Shield, Database, Code2 } from 'lucide-react';
 import { Match, MatchDetail } from '../types';
+import { formatMatchClock } from '../utils/clock';
 
 interface MatchDetailModalProps {
   match: Match | null;
@@ -75,9 +76,7 @@ print(detail)
               {(match.status === 'Live' || match.status === '1st Half' || match.status === '2nd Half' || match.status === 'Half Time' || ['2', '6', '13', '14', '15', '16', '17', '18', '38', '46'].includes(match.status_code)) && (
                 <span className="text-xs font-semibold px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse"></span>
-                  {match.elapsed_minute ? (
-                    match.elapsed_minute.includes('HT') || match.elapsed_minute.includes('FT') ? match.elapsed_minute : (parseInt(match.elapsed_minute, 10) <= 45 ? `1HT ${match.elapsed_minute}'` : `2HT ${match.elapsed_minute}'`)
-                  ) : 'Live'}
+                  {formatMatchClock(match.elapsed_minute, match.status)}
                 </span>
               )}
             </div>

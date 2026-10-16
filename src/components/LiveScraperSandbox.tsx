@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { formatMatchClock } from '../utils/clock';
 import {
   Search,
   RefreshCw,
@@ -380,7 +381,7 @@ export const LiveScraperSandbox: React.FC<LiveScraperSandboxProps> = () => {
                         {isLive ? (
                           <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-red-500/20 text-red-400 border border-red-500/30 flex items-center gap-1 animate-pulse">
                             <span className="w-1.5 h-1.5 rounded-full bg-red-400"></span>
-                            {match.elapsed_minute || 'Live'}
+                            {formatMatchClock(match.elapsed_minute, match.status)}
                           </span>
                         ) : isFinished ? (
                           <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800 text-slate-400 border border-slate-700/60">

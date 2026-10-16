@@ -3,6 +3,7 @@ import { createServer as createViteServer } from 'vite';
 import http from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
 import { PYTHON_TEMPLATES } from './src/python_templates';
@@ -209,13 +210,25 @@ function parseFeedText(rawText: string) {
           }
         } else if (ac && ac !== 'Live') {
           if (ac.startsWith('1HT') || ac.startsWith('2HT') || ac === 'HT' || ac === 'FT') {
-            elapsedMinute = ac;
+            elapsedMinute = ac.endsWith("'") || ac === 'HT' || ac === 'FT' ? ac : `${ac}'`;
           } else {
-            const num = parseInt(ac, 10);
-            if (!isNaN(num)) {
-              elapsedMinute = num <= 45 ? `1HT ${num}'` : `2HT ${num}'`;
+            const cleanAc = ac.replace(/min|mins|'/gi, '').trim();
+            if (cleanAc.includes('+')) {
+              const parts = cleanAc.split('+');
+              const b = parseInt(parts[0], 10);
+              const e = parseInt(parts[1], 10);
+              if (!isNaN(b) && !isNaN(e)) {
+                elapsedMinute = b <= 45 ? `1HT ${b}+${e}'` : `2HT ${b}+${e}'`;
+              } else {
+                elapsedMinute = ac.endsWith("'") ? ac : `${ac}'`;
+              }
             } else {
-              elapsedMinute = ac.endsWith("'") ? ac : `${ac}'`;
+              const num = parseInt(cleanAc, 10);
+              if (!isNaN(num)) {
+                elapsedMinute = num <= 45 ? `1HT ${num}'` : `2HT ${num}'`;
+              } else {
+                elapsedMinute = ac.endsWith("'") ? ac : `${ac}'`;
+              }
             }
           }
         } else if (ts > 0) {
@@ -787,62 +800,85 @@ interface StoredPrediction {
 
 const PREDICTIONS_STORE: Map<string, StoredPrediction> = new Map();
 
-// Helper to seed initial sample settled predictions so Performance Analytics immediately displays rich audit metrics
-function seedInitialHistory() {
-  const dates = ['2026-10-14', '2026-10-15', '2026-10-16'];
-  const samples = [
-    { id: 'p_1', date: dates[0], home: 'Arsenal', away: 'Southampton', league: 'Premier League', mkt: 'Match Result', sel: 'Home Win', odds: 1.44, prob: 0.78, status: 'WIN', hScore: 3, aScore: 1, profit: 0.44 },
-    { id: 'p_2', date: dates[0], home: 'Bayer Leverkusen', away: 'Frankfurt', league: 'Bundesliga', mkt: 'Goals Over/Under', sel: 'Over 2.5 Goals', odds: 1.55, prob: 0.74, status: 'WIN', hScore: 2, aScore: 1, profit: 0.55 },
-    { id: 'p_3', date: dates[0], home: 'Real Madrid', away: 'Villarreal', league: 'LaLiga', mkt: 'Match Result', sel: 'Home Win', odds: 1.38, prob: 0.81, status: 'WIN', hScore: 2, aScore: 0, profit: 0.38 },
-    { id: 'p_4', date: dates[0], home: 'Napoli', away: 'Empoli', league: 'Serie A', mkt: 'Match Result', sel: 'Away Win', odds: 1.85, prob: 0.62, status: 'WIN', hScore: 0, aScore: 2, profit: 0.85 },
-    { id: 'p_5', date: dates[0], home: 'Stuttgart', away: 'Hoffenheim', league: 'Bundesliga', mkt: 'Both Teams To Score', sel: 'BTTS Yes', odds: 1.62, prob: 0.69, status: 'LOST', hScore: 1, aScore: 0, profit: -1.0 },
+async function seedInitialHistory() {
+  try {
+    const yesterdayDate = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    const prevDate = new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0];
 
-    { id: 'p_6', date: dates[1], home: 'Liverpool', away: 'Chelsea', league: 'Premier League', mkt: 'Goals Over/Under', sel: 'Over 2.5 Goals', odds: 1.65, prob: 0.72, status: 'WIN', hScore: 2, aScore: 1, profit: 0.65 },
-    { id: 'p_7', date: dates[1], home: 'Barcelona', away: 'Sevilla', league: 'LaLiga', mkt: 'Match Result', sel: 'Home Win', odds: 1.42, prob: 0.79, status: 'WIN', hScore: 3, aScore: 1, profit: 0.42 },
-    { id: 'p_8', date: dates[1], home: 'Inter Milan', away: 'Roma', league: 'Serie A', mkt: 'Match Result', sel: 'Home Win', odds: 1.52, prob: 0.75, status: 'WIN', hScore: 2, aScore: 0, profit: 0.52 },
-    { id: 'p_9', date: dates[1], home: 'Monaco', away: 'Lille', league: 'Ligue 1', mkt: 'Both Teams To Score', sel: 'BTTS Yes', odds: 1.68, prob: 0.67, status: 'LOST', hScore: 0, aScore: 0, profit: -1.0 },
-    { id: 'p_10', date: dates[1], home: 'Feyenoord', away: 'Twente', league: 'Eredivisie', mkt: 'Goals Over/Under', sel: 'Over 2.5 Goals', odds: 1.60, prob: 0.71, status: 'WIN', hScore: 2, aScore: 1, profit: 0.60 },
-  ];
+    const yesterdayMatches = await fetchFlashscoreFeed('football', -1);
+    const prevMatches = await fetchFlashscoreFeed('football', -2);
 
-  samples.forEach((s, idx) => {
-    PREDICTIONS_STORE.set(s.id, {
-      prediction_id: s.id,
-      match_id: `m_${idx}`,
-      prediction_date: s.date,
-      published_at_utc: `${s.date}T10:00:00Z`,
-      kickoff_utc: `${s.date}T18:00:00Z`,
-      league: s.league,
-      home_team: s.home,
-      away_team: s.away,
-      market: s.mkt,
-      selection: s.sel,
-      decimal_odds: s.odds,
-      odds_provider: 'Bet365 / Pinnacle Consensus',
-      odds_observed_at_utc: `${s.date}T09:30:00Z`,
-      model_probability: s.prob,
-      implied_probability: Math.round((1.0 / s.odds) * 1000) / 1000,
-      estimated_ev: Math.round(((s.prob * s.odds) - 1.0) * 1000) / 1000,
-      model_name: 'CalibratedEnsemble-v2.1',
-      model_version: '2.1.0',
-      data_quality_score: 0.96,
-      model_uncertainty: 0.07,
-      model_agreement_pct: 88.5,
-      rank_position: (idx % 5) + 1,
-      status: s.status as any,
-      home_final_score: s.hScore,
-      away_final_score: s.aScore,
-      settled_at_utc: `${s.date}T20:00:00Z`,
-      stake_units: 1.0,
-      profit_units: s.profit,
-      supporting_reasons: [
-        `Calibrated model probability: ${(s.prob * 100).toFixed(1)}% vs Bookmaker implied: ${(100 / s.odds).toFixed(1)}%`,
-        `Positive expected value edge: +${(((s.prob * s.odds) - 1.0) * 100).toFixed(1)}%`,
-        `High multi-model agreement across Poisson Dixon-Coles, ML, and Elo ratings`
-      ]
-    });
-  });
+    const finishedYesterday = yesterdayMatches.filter((m) => ['3', '7', '8'].includes(String(m.status_code)) || m.status === 'Finished');
+    const finishedPrev = prevMatches.filter((m) => ['3', '7', '8'].includes(String(m.status_code)) || m.status === 'Finished');
+
+    if (finishedYesterday.length > 0) {
+      const slotsY = runFixedAllocationOptimizer(finishedYesterday, 1.30, 5.00, 0.50);
+      slotsY.forEach((s) => {
+        s.prediction_date = yesterdayDate;
+        s.prediction_id = `pred_${yesterdayDate.replace(/-/g, '')}_${s.match_id}_${s.rank_position}`;
+        const m = finishedYesterday.find((x) => x.id === s.match_id);
+        if (m && !isNaN(parseInt(m.home_score, 10)) && !isNaN(parseInt(m.away_score, 10))) {
+          const hScore = parseInt(m.home_score, 10);
+          const aScore = parseInt(m.away_score, 10);
+          s.home_final_score = hScore;
+          s.away_final_score = aScore;
+          s.settled_at_utc = `${yesterdayDate}T22:00:00Z`;
+
+          let win = false;
+          if (s.market === 'Match Result') {
+            if (s.selection === 'Home Win') win = hScore > aScore;
+            else if (s.selection === 'Away Win') win = aScore > hScore;
+          } else if (s.market === 'Goals Over/Under') {
+            win = (hScore + aScore) > 2.5;
+          } else if (s.market === 'Both Teams To Score') {
+            win = hScore > 0 && aScore > 0;
+          }
+
+          s.status = win ? 'WIN' : 'LOST';
+          s.profit_units = win ? Math.round((s.decimal_odds - 1.0) * 100) / 100 : -1.0;
+        } else {
+          s.status = 'UNRESOLVED';
+        }
+        PREDICTIONS_STORE.set(s.prediction_id, s);
+      });
+    }
+
+    if (finishedPrev.length > 0) {
+      const slotsP = runFixedAllocationOptimizer(finishedPrev, 1.30, 5.00, 0.50);
+      slotsP.forEach((s) => {
+        s.prediction_date = prevDate;
+        s.prediction_id = `pred_${prevDate.replace(/-/g, '')}_${s.match_id}_${s.rank_position}`;
+        const m = finishedPrev.find((x) => x.id === s.match_id);
+        if (m && !isNaN(parseInt(m.home_score, 10)) && !isNaN(parseInt(m.away_score, 10))) {
+          const hScore = parseInt(m.home_score, 10);
+          const aScore = parseInt(m.away_score, 10);
+          s.home_final_score = hScore;
+          s.away_final_score = aScore;
+          s.settled_at_utc = `${prevDate}T22:00:00Z`;
+
+          let win = false;
+          if (s.market === 'Match Result') {
+            if (s.selection === 'Home Win') win = hScore > aScore;
+            else if (s.selection === 'Away Win') win = aScore > hScore;
+          } else if (s.market === 'Goals Over/Under') {
+            win = (hScore + aScore) > 2.5;
+          } else if (s.market === 'Both Teams To Score') {
+            win = hScore > 0 && aScore > 0;
+          }
+
+          s.status = win ? 'WIN' : 'LOST';
+          s.profit_units = win ? Math.round((s.decimal_odds - 1.0) * 100) / 100 : -1.0;
+        } else {
+          s.status = 'UNRESOLVED';
+        }
+        PREDICTIONS_STORE.set(s.prediction_id, s);
+      });
+    }
+  } catch (err) {
+    console.error('Failed to initialize real history from Flashscore:', err);
+  }
 }
-seedInitialHistory();
+seedInitialHistory().catch(() => {});
 
 function generateMatchIntelligence(match: any, minOdds = 1.30, maxOdds = 5.00, minProb = 0.50) {
   const mId = match.id;
@@ -919,11 +955,12 @@ function generateMatchIntelligence(match: any, minOdds = 1.30, maxOdds = 5.00, m
     .sort((a, b) => b.ranking_score - a.ranking_score);
 }
 
-function buildStoredPrediction(candidate: any, rank: number, dateStr: string, label: string): StoredPrediction {
+function buildStoredPrediction(candidate: any, rank: number, fallbackDateStr: string, label: string): StoredPrediction {
+  const matchDate = candidate.kickoff_utc ? candidate.kickoff_utc.split('T')[0] : fallbackDateStr;
   return {
-    prediction_id: `pred_${dateStr.replace(/-/g, '')}_${candidate.match_id}_${rank}`,
+    prediction_id: `pred_${matchDate.replace(/-/g, '')}_${candidate.match_id}_${rank}`,
     match_id: candidate.match_id,
-    prediction_date: dateStr,
+    prediction_date: matchDate,
     published_at_utc: new Date().toISOString(),
     kickoff_utc: candidate.kickoff_utc || new Date().toISOString(),
     league: candidate.league || 'Global Football Intelligence',
@@ -1102,11 +1139,17 @@ app.get('/api/v2/predictions/top5', async (req: Request, res: Response) => {
       .filter((p) => p.prediction_date === targetDate && !(p as any).is_empty_slot && p.selection !== 'EMPTY SLOT' && p.home_team !== 'NO QUALIFIED SELECTION')
       .sort((a, b) => a.rank_position - b.rank_position);
 
-    if (list.length < 5 && targetDate === new Date().toISOString().split('T')[0]) {
-      const matches = await fetchFlashscoreFeed('football', 0);
+    if (list.length < 5) {
+      const todayMs = new Date(new Date().toISOString().split('T')[0]).getTime();
+      const targetMs = new Date(targetDate).getTime();
+      const dayOffset = Math.round((targetMs - todayMs) / 86400000);
+
+      const matches = await fetchFlashscoreFeed('football', isNaN(dayOffset) ? 0 : dayOffset);
       const fixedSlots = runFixedAllocationOptimizer(matches, 1.30, 5.00, 0.50);
       list = [];
       fixedSlots.forEach((record) => {
+        record.prediction_date = targetDate;
+        record.prediction_id = `pred_${targetDate.replace(/-/g, '')}_${record.match_id}_${record.rank_position}`;
         PREDICTIONS_STORE.set(record.prediction_id, record);
         list.push(record);
       });
@@ -1123,10 +1166,13 @@ app.get('/api/v2/predictions/top5', async (req: Request, res: Response) => {
 });
 
 // GET /api/v2/predictions/history
-app.get('/api/v2/predictions/history', (_req: Request, res: Response) => {
-  const history = Array.from(PREDICTIONS_STORE.values()).sort(
-    (a, b) => new Date(b.published_at_utc).getTime() - new Date(a.published_at_utc).getTime()
-  );
+app.get('/api/v2/predictions/history', async (_req: Request, res: Response) => {
+  if (PREDICTIONS_STORE.size <= 5) {
+    await seedInitialHistory();
+  }
+  const history = Array.from(PREDICTIONS_STORE.values())
+    .filter((p) => !(p as any).is_empty_slot && p.selection !== 'EMPTY SLOT' && p.home_team !== 'NO QUALIFIED SELECTION')
+    .sort((a, b) => new Date(b.published_at_utc).getTime() - new Date(a.published_at_utc).getTime());
   res.json({ total: history.length, history });
 });
 
@@ -1394,10 +1440,54 @@ app.get('/api/templates', (_req: Request, res: Response) => {
 // V2.2 REAL-TIME FOOTBALL INTELLIGENCE, LIVE SIGNALS & AUTOMATION ENDPOINTS
 // ============================================================================
 
+let cachedPythonPath: string | null = null;
+
+function getPythonCommand(): string {
+  if (cachedPythonPath) return cachedPythonPath;
+
+  const envPath = process.env.PYTHON || process.env.PYTHON_EXECUTABLE || process.env.PYTHON_BIN;
+  if (envPath && envPath.trim().length > 0 && fs.existsSync(envPath.trim())) {
+    cachedPythonPath = envPath.trim();
+    return cachedPythonPath;
+  }
+
+  if (process.platform === 'win32') {
+    const candidates = [
+      'C:\\Python313\\python.exe',
+      'C:\\Python312\\python.exe',
+      'C:\\Python311\\python.exe',
+      'C:\\Python310\\python.exe',
+      'C:\\Python39\\python.exe',
+      ...(process.env.LOCALAPPDATA ? [
+        path.join(process.env.LOCALAPPDATA, 'Programs', 'Python', 'Python313', 'python.exe'),
+        path.join(process.env.LOCALAPPDATA, 'Programs', 'Python', 'Python312', 'python.exe'),
+        path.join(process.env.LOCALAPPDATA, 'Programs', 'Python', 'Python311', 'python.exe'),
+        path.join(process.env.LOCALAPPDATA, 'Programs', 'Python', 'Python310', 'python.exe'),
+      ] : []),
+      ...(process.env.USERPROFILE ? [
+        path.join(process.env.USERPROFILE, 'AppData', 'Local', 'Programs', 'Python', 'Python313', 'python.exe'),
+        path.join(process.env.USERPROFILE, 'AppData', 'Local', 'Programs', 'Python', 'Python312', 'python.exe'),
+      ] : []),
+    ];
+
+    for (const cand of candidates) {
+      if (fs.existsSync(cand)) {
+        cachedPythonPath = cand;
+        return cachedPythonPath;
+      }
+    }
+    cachedPythonPath = 'py';
+    return cachedPythonPath;
+  }
+
+  cachedPythonPath = 'python3';
+  return cachedPythonPath;
+}
+
 function runPythonBridge(action: string, args: string[] = []): Promise<any> {
   return new Promise((resolve, reject) => {
     const bridgePath = path.resolve(__dirname, 'python_app/live_api_bridge.py');
-    const pyProcess = spawn('python3', [bridgePath, action, ...args], {
+    const pyProcess = spawn(getPythonCommand(), [bridgePath, action, ...args], {
       cwd: path.resolve(__dirname, 'python_app'),
       env: { ...process.env, PYTHONPATH: path.resolve(__dirname, 'python_app'), PYTHONUNBUFFERED: '1' },
     });
@@ -1489,12 +1579,37 @@ app.post('/api/v2/live/signals/scan', async (_req: Request, res: Response) => {
 // 4b. Sync Flashscore Live CDN Directly
 app.post('/api/v2/live/sync-flashscore', async (_req: Request, res: Response) => {
   try {
-    const syncResult = await runPythonBridge('sync_flashscore');
+    let syncResult: any = null;
+    try {
+      syncResult = await runPythonBridge('sync_flashscore');
+      if (syncResult && syncResult.error) {
+        throw new Error(syncResult.error);
+      }
+    } catch {
+      // JS Direct Fallback
+      const liveMatches = await fetchFlashscoreFeed('football', 0);
+      const activeLive = liveMatches.filter((m) =>
+        ['2', '6', '13', '14', '15', '16', '17', '18', '38', '46'].includes(String(m.status_code)) ||
+        ['live', '1st half', '2nd half', 'half time'].includes((m.status || '').toLowerCase())
+      );
+      syncResult = {
+        scanned_matches: liveMatches.length,
+        detected_signals: activeLive.length,
+        new_signals: [],
+        live_matches: activeLive,
+      };
+    }
+
     if (syncResult && syncResult.live_matches) {
       cachedLiveMatches = syncResult.live_matches;
       lastLiveFetchTime = Date.now();
     }
-    res.json({ success: true, ...syncResult });
+
+    res.json({
+      success: true,
+      source: 'Flashscore CDN Direct Proxy',
+      ...syncResult,
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -1628,7 +1743,7 @@ app.post('/api/python/run', (req: Request, res: Response) => {
   }
 
   const startTime = Date.now();
-  const pyProcess = spawn('python3', ['-c', code], {
+  const pyProcess = spawn(getPythonCommand(), ['-c', code], {
     cwd: path.resolve(__dirname, 'python_app'),
     env: { ...process.env, PYTHONUNBUFFERED: '1' },
   });

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, RefreshCw, Layers, Database } from 'lucide-react';
+import { formatMatchClock } from '../utils/clock';
 
 export const AllMatchesView: React.FC = () => {
   const [analyses, setAnalyses] = useState<any[]>([]);
@@ -134,9 +135,9 @@ export const AllMatchesView: React.FC = () => {
                 <div className="flex items-center justify-between text-[11px] text-slate-400">
                   <span className="font-semibold text-slate-300">{match.league}</span>
                   <span className={`px-2 py-0.5 rounded text-[11px] font-mono ${match.status === 'Live' || match.status === '1st Half' || match.status === '2nd Half' || match.status === 'Half Time' ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold' : 'bg-slate-800 text-slate-400'}`}>
-                    {match.status === 'Live' || match.status === '1st Half' || match.status === '2nd Half' || match.status === 'Half Time' ? (
-                      match.elapsed_minute ? (match.elapsed_minute.includes('HT') || match.elapsed_minute.includes('FT') ? match.elapsed_minute : (parseInt(match.elapsed_minute, 10) <= 45 ? `1HT ${match.elapsed_minute}'` : `2HT ${match.elapsed_minute}'`)) : 'Live'
-                    ) : match.status || 'Scheduled'}
+                    {match.status === 'Live' || match.status === '1st Half' || match.status === '2nd Half' || match.status === 'Half Time'
+                      ? formatMatchClock(match.elapsed_minute, match.status)
+                      : (match.status || 'Scheduled')}
                   </span>
                 </div>
 

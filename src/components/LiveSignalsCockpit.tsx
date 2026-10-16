@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { formatMatchClock } from '../utils/clock';
 import {
   Radio,
   Zap,
@@ -676,7 +677,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                            {typeof sig.minute === 'number' ? (sig.minute <= 45 ? `1HT ${sig.minute}'` : `2HT ${sig.minute}'`) : String(sig.minute).includes('HT') ? sig.minute : `${sig.minute}'`}
+                            {formatMatchClock(sig.minute)}
                           </span>
                           <span className="text-xs font-black text-white bg-slate-800 px-2 py-0.5 rounded">
                             {sig.score_at_signal}
@@ -892,7 +893,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                       <span className="px-2 py-0.5 text-xs font-black rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                        {m.elapsed_minute ? (m.elapsed_minute.includes('HT') || m.elapsed_minute.includes('FT') ? m.elapsed_minute : (parseInt(m.elapsed_minute, 10) <= 45 ? `1HT ${m.elapsed_minute}'` : `2HT ${m.elapsed_minute}'`)) : 'Live'}
+                        {formatMatchClock(m.elapsed_minute, m.status)}
                       </span>
                       <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                         LIVE
