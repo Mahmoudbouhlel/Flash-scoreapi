@@ -872,9 +872,15 @@ export const LiveSignalsCockpit: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{m.league}</span>
                     <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                       <span className="px-2 py-0.5 text-xs font-black rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30">
                         {m.elapsed_minute || 'Live'}
+                      </span>
+                      <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        LIVE
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">
+                        Sync: {m.last_sync ? new Date(m.last_sync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : new Date().toLocaleTimeString()}
                       </span>
                     </div>
                   </div>

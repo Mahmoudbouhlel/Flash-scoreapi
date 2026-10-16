@@ -349,9 +349,11 @@ export interface LiveMatch {
   home_team: string;
   away_team: string;
   league: string;
+  country?: string;
   status: string;
   status_code: string;
   elapsed_minute: string;
+  last_sync?: string;
   home_score: string;
   away_score: string;
   stats?: {

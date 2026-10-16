@@ -526,24 +526,22 @@ export const Top5PredictionsView: React.FC = () => {
                       {/* Top Bar: Rank, Match, Market, Odds, Status */}
                       <div className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80">
                         <div className="flex items-start sm:items-center gap-3">
-                          {/* Rank Badge */}
-                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-slate-950 font-black text-sm flex items-center justify-center shadow-md shadow-emerald-500/20 shrink-0">
-                            #{sel.rank_position}
-                          </div>
-
-                          {/* Match and League */}
-                          <div className="space-y-0.5">
-                            <div className="flex items-center gap-2 text-xs text-slate-400">
-                              <span className="font-semibold text-slate-300">{sel.league}</span>
-                              <span>•</span>
-                              <span>
-                                {sel.kickoff_utc
-                                  ? new Date(sel.kickoff_utc).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                                  : 'Scheduled'}
-                              </span>
+                          {/* Rank Badge & Fixed Allocation Slot Label */}
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-slate-950 font-black text-sm flex items-center justify-center shadow-md shadow-emerald-500/20 shrink-0">
+                              #{sel.rank_position}
                             </div>
-                            <div className="text-base sm:text-lg font-bold text-white">
-                              {sel.home_team} <span className="text-slate-500 font-normal">vs</span> {sel.away_team}
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2 text-xs text-slate-400">
+                                <span className="px-2 py-0.5 rounded font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px]">
+                                  {sel.rank_position === 1 ? 'BEST HOME WIN (1)' : sel.rank_position === 2 ? 'SECOND HOME WIN (1)' : sel.rank_position === 3 ? 'BEST AWAY WIN (2)' : sel.rank_position === 4 ? 'BEST OVER 2.5 (O2.5)' : 'BEST GG / BTTS (GG)'}
+                                </span>
+                                <span>•</span>
+                                <span className="font-semibold text-slate-300">{sel.league}</span>
+                              </div>
+                              <div className="text-base sm:text-lg font-bold text-white">
+                                {sel.home_team} <span className="text-slate-500 font-normal">vs</span> {sel.away_team}
+                              </div>
                             </div>
                           </div>
                         </div>

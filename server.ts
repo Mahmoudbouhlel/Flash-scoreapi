@@ -155,7 +155,25 @@ function parseFeedText(rawText: string) {
         periods.push({ period: '2nd Half', home: fields['BB'], away: fields['BD'] });
       }
 
-      const elapsedMinute = rawStatus === '2' ? fields['AC'] || 'Live' : null;
+      let elapsedMinute = null;
+      if (rawStatus === '2') {
+        const ac = (fields['AC'] || '').trim();
+        const ts = fields['AD'] && !isNaN(Number(fields['AD'])) ? Number(fields['AD']) : 0;
+        if (ac && ac !== 'Live') {
+          elapsedMinute = ac;
+        } else if (ts > 0) {
+          const diffMins = Math.floor((Date.now() / 1000 - ts) / 60);
+          if (diffMins > 0 && diffMins < 120) {
+            if (diffMins > 45 && diffMins <= 60) elapsedMinute = '45+';
+            else if (diffMins > 60) elapsedMinute = `${Math.min(90, diffMins - 15)}`;
+            else elapsedMinute = `${diffMins}`;
+          } else {
+            elapsedMinute = '45';
+          }
+        } else {
+          elapsedMinute = '45';
+        }
+      }
 
       matches.push({
         id: matchId,
@@ -714,12 +732,12 @@ function seedInitialHistory() {
     { id: 'p_1', date: dates[0], home: 'Arsenal', away: 'Southampton', league: 'Premier League', mkt: 'Match Result', sel: 'Home Win', odds: 1.44, prob: 0.78, status: 'WIN', hScore: 3, aScore: 1, profit: 0.44 },
     { id: 'p_2', date: dates[0], home: 'Bayer Leverkusen', away: 'Frankfurt', league: 'Bundesliga', mkt: 'Goals Over/Under', sel: 'Over 2.5 Goals', odds: 1.55, prob: 0.74, status: 'WIN', hScore: 2, aScore: 1, profit: 0.55 },
     { id: 'p_3', date: dates[0], home: 'Real Madrid', away: 'Villarreal', league: 'LaLiga', mkt: 'Match Result', sel: 'Home Win', odds: 1.38, prob: 0.81, status: 'WIN', hScore: 2, aScore: 0, profit: 0.38 },
-    { id: 'p_4', date: dates[0], home: 'AC Milan', away: 'Udinese', league: 'Serie A', mkt: 'Double Chance', sel: '1X', odds: 1.32, prob: 0.84, status: 'WIN', hScore: 1, aScore: 0, profit: 0.32 },
+    { id: 'p_4', date: dates[0], home: 'Napoli', away: 'Empoli', league: 'Serie A', mkt: 'Match Result', sel: 'Away Win', odds: 1.85, prob: 0.62, status: 'WIN', hScore: 0, aScore: 2, profit: 0.85 },
     { id: 'p_5', date: dates[0], home: 'Stuttgart', away: 'Hoffenheim', league: 'Bundesliga', mkt: 'Both Teams To Score', sel: 'BTTS Yes', odds: 1.62, prob: 0.69, status: 'LOST', hScore: 1, aScore: 0, profit: -1.0 },
 
-    { id: 'p_6', date: dates[1], home: 'Liverpool', away: 'Chelsea', league: 'Premier League', mkt: 'Goals Over/Under', sel: 'Over 1.5 Goals', odds: 1.35, prob: 0.82, status: 'WIN', hScore: 2, aScore: 1, profit: 0.35 },
-    { id: 'p_7', date: dates[1], home: 'Barcelona', away: 'Sevilla', league: 'LaLiga', mkt: 'Match Result', sel: 'Home Win', odds: 1.42, prob: 0.79, status: 'WIN', hScore: 5, aScore: 1, profit: 0.42 },
-    { id: 'p_8', date: dates[1], home: 'Juventus', away: 'Lazio', league: 'Serie A', mkt: 'Draw No Bet', sel: 'Home DNB', odds: 1.48, prob: 0.73, status: 'WIN', hScore: 1, aScore: 0, profit: 0.48 },
+    { id: 'p_6', date: dates[1], home: 'Liverpool', away: 'Chelsea', league: 'Premier League', mkt: 'Goals Over/Under', sel: 'Over 2.5 Goals', odds: 1.65, prob: 0.72, status: 'WIN', hScore: 2, aScore: 1, profit: 0.65 },
+    { id: 'p_7', date: dates[1], home: 'Barcelona', away: 'Sevilla', league: 'LaLiga', mkt: 'Match Result', sel: 'Home Win', odds: 1.42, prob: 0.79, status: 'WIN', hScore: 3, aScore: 1, profit: 0.42 },
+    { id: 'p_8', date: dates[1], home: 'Inter Milan', away: 'Roma', league: 'Serie A', mkt: 'Match Result', sel: 'Home Win', odds: 1.52, prob: 0.75, status: 'WIN', hScore: 2, aScore: 0, profit: 0.52 },
     { id: 'p_9', date: dates[1], home: 'Monaco', away: 'Lille', league: 'Ligue 1', mkt: 'Both Teams To Score', sel: 'BTTS Yes', odds: 1.68, prob: 0.67, status: 'LOST', hScore: 0, aScore: 0, profit: -1.0 },
     { id: 'p_10', date: dates[1], home: 'Feyenoord', away: 'Twente', league: 'Eredivisie', mkt: 'Goals Over/Under', sel: 'Over 2.5 Goals', odds: 1.60, prob: 0.71, status: 'WIN', hScore: 2, aScore: 1, profit: 0.60 },
   ];
@@ -786,22 +804,17 @@ function generateMatchIntelligence(match: any, minOdds = 1.30, maxOdds = 5.00, m
   const pHomeWin = Math.min(0.82, Math.max(0.25, 0.44 + (lambdaH - muA) * 0.22));
   const pDraw = Math.min(0.32, Math.max(0.18, 0.27 - Math.abs(pHomeWin - 0.45) * 0.15));
   const pAwayWin = Math.max(0.12, 1.0 - pHomeWin - pDraw);
-
-  const pOver15 = Math.min(0.92, Math.max(0.60, 0.68 + (lambdaH + muA - 2.0) * 0.12));
   const pOver25 = Math.min(0.78, Math.max(0.32, 0.45 + (lambdaH + muA - 2.2) * 0.14));
-  const pUnder25 = 1.0 - pOver25;
   const pBTTS = Math.min(0.75, Math.max(0.38, 0.50 + Math.min(lambdaH, muA) * 0.18));
 
   const candidates = [
     { mkt: 'Match Result', sel: 'Home Win', prob: pHomeWin, rawOdds: Math.max(1.32, Math.round((1.0 / (pHomeWin * 1.05)) * 100) / 100) },
-    { mkt: 'Double Chance', sel: '1X', prob: pHomeWin + pDraw, rawOdds: Math.max(1.31, Math.round((1.0 / ((pHomeWin + pDraw) * 1.04)) * 100) / 100) },
-    { mkt: 'Goals Over/Under', sel: 'Over 1.5 Goals', prob: pOver15, rawOdds: Math.max(1.32, Math.round((1.0 / (pOver15 * 1.04)) * 100) / 100) },
+    { mkt: 'Match Result', sel: 'Away Win', prob: pAwayWin, rawOdds: Math.max(1.32, Math.round((1.0 / (pAwayWin * 1.05)) * 100) / 100) },
     { mkt: 'Goals Over/Under', sel: 'Over 2.5 Goals', prob: pOver25, rawOdds: Math.max(1.45, Math.round((1.0 / (pOver25 * 1.05)) * 100) / 100) },
-    { mkt: 'Goals Over/Under', sel: 'Under 2.5 Goals', prob: pUnder25, rawOdds: Math.max(1.45, Math.round((1.0 / (pUnder25 * 1.05)) * 100) / 100) },
     { mkt: 'Both Teams To Score', sel: 'BTTS Yes', prob: pBTTS, rawOdds: Math.max(1.42, Math.round((1.0 / (pBTTS * 1.05)) * 100) / 100) },
   ];
 
-  const qualified = candidates
+  return candidates
     .filter((c) => c.rawOdds > minOdds && c.rawOdds <= maxOdds && c.prob >= minProb)
     .map((c) => {
       const ev = Math.round(((c.prob * c.rawOdds) - 1.0) * 1000) / 1000;
@@ -834,10 +847,191 @@ function generateMatchIntelligence(match: any, minOdds = 1.30, maxOdds = 5.00, m
         ]
       };
     })
-    .filter((q) => q.estimated_ev > 0.0);
+    .filter((q) => q.estimated_ev > 0.0)
+    .sort((a, b) => b.ranking_score - a.ranking_score);
+}
 
-  if (qualified.length === 0) return null;
-  return qualified.sort((a, b) => b.ranking_score - a.ranking_score)[0];
+function createEmptySlot(rank: number, label: string, market: string, selection: string) {
+  const todayStr = new Date().toISOString().split('T')[0];
+  return {
+    prediction_id: `empty_slot_${todayStr}_${rank}`,
+    match_id: `empty_match_${rank}`,
+    prediction_date: todayStr,
+    published_at_utc: new Date().toISOString(),
+    kickoff_utc: new Date().toISOString(),
+    league: 'NO QUALIFIED LEAGUE',
+    home_team: 'NO QUALIFIED PICK',
+    away_team: `(${label})`,
+    market,
+    selection: 'NO QUALIFIED PICK',
+    decimal_odds: 1.0,
+    odds_provider: 'None',
+    odds_observed_at_utc: new Date().toISOString(),
+    model_probability: 0.0,
+    implied_probability: 0.0,
+    estimated_ev: 0.0,
+    model_name: 'CalibratedEnsemble-v3.1',
+    model_version: '3.1.0',
+    data_quality_score: 0.0,
+    model_uncertainty: 0.0,
+    model_agreement_pct: 0.0,
+    rank_position: rank,
+    status: 'UNRESOLVED' as const,
+    home_final_score: null,
+    away_final_score: null,
+    settled_at_utc: null,
+    stake_units: 0.0,
+    profit_units: 0.0,
+    supporting_reasons: [`Slot reserved for ${label}. No match met the strict selection criteria without duplication.`],
+  };
+}
+
+function runFixedAllocationOptimizer(matches: any[], minOdds: number, maxOdds: number, minProb: number) {
+  const homeWinPool: any[] = [];
+  const awayWinPool: any[] = [];
+  const over25Pool: any[] = [];
+  const bttsPool: any[] = [];
+
+  matches.forEach((m) => {
+    const opps = generateMatchIntelligence(m, minOdds, maxOdds, minProb);
+    opps.forEach((o) => {
+      if (o.selection === 'Home Win') homeWinPool.push(o);
+      else if (o.selection === 'Away Win') awayWinPool.push(o);
+      else if (o.selection === 'Over 2.5 Goals') over25Pool.push(o);
+      else if (o.selection === 'BTTS Yes') bttsPool.push(o);
+    });
+  });
+
+  homeWinPool.sort((a, b) => b.ranking_score - a.ranking_score);
+  awayWinPool.sort((a, b) => b.ranking_score - a.ranking_score);
+  over25Pool.sort((a, b) => b.ranking_score - a.ranking_score);
+  bttsPool.sort((a, b) => b.ranking_score - a.ranking_score);
+
+  const usedMatches = new Set<string>();
+  const todayStr = new Date().toISOString().split('T')[0];
+  const slots: StoredPrediction[] = [];
+
+  // #1 Best Home Win
+  const s1 = homeWinPool.find((c) => !usedMatches.has(c.match_id));
+  if (s1) {
+    usedMatches.add(s1.match_id);
+    slots.push({
+      ...s1,
+      prediction_id: `pred_${todayStr.replace(/-/g, '')}_${s1.match_id}_1`,
+      prediction_date: todayStr,
+      published_at_utc: new Date().toISOString(),
+      model_name: 'CalibratedEnsemble-v3.1',
+      model_version: '3.1.0',
+      data_quality_score: 0.95,
+      rank_position: 1,
+      status: 'PENDING',
+      home_final_score: null,
+      away_final_score: null,
+      settled_at_utc: null,
+      stake_units: 1.0,
+      profit_units: 0.0,
+    });
+  } else {
+    slots.push(createEmptySlot(1, 'Best Home Win', 'Match Result', 'Home Win') as any);
+  }
+
+  // #2 Second Home Win
+  const s2 = homeWinPool.find((c) => !usedMatches.has(c.match_id));
+  if (s2) {
+    usedMatches.add(s2.match_id);
+    slots.push({
+      ...s2,
+      prediction_id: `pred_${todayStr.replace(/-/g, '')}_${s2.match_id}_2`,
+      prediction_date: todayStr,
+      published_at_utc: new Date().toISOString(),
+      model_name: 'CalibratedEnsemble-v3.1',
+      model_version: '3.1.0',
+      data_quality_score: 0.95,
+      rank_position: 2,
+      status: 'PENDING',
+      home_final_score: null,
+      away_final_score: null,
+      settled_at_utc: null,
+      stake_units: 1.0,
+      profit_units: 0.0,
+    });
+  } else {
+    slots.push(createEmptySlot(2, 'Second Home Win', 'Match Result', 'Home Win') as any);
+  }
+
+  // #3 Best Away Win
+  const s3 = awayWinPool.find((c) => !usedMatches.has(c.match_id));
+  if (s3) {
+    usedMatches.add(s3.match_id);
+    slots.push({
+      ...s3,
+      prediction_id: `pred_${todayStr.replace(/-/g, '')}_${s3.match_id}_3`,
+      prediction_date: todayStr,
+      published_at_utc: new Date().toISOString(),
+      model_name: 'CalibratedEnsemble-v3.1',
+      model_version: '3.1.0',
+      data_quality_score: 0.95,
+      rank_position: 3,
+      status: 'PENDING',
+      home_final_score: null,
+      away_final_score: null,
+      settled_at_utc: null,
+      stake_units: 1.0,
+      profit_units: 0.0,
+    });
+  } else {
+    slots.push(createEmptySlot(3, 'Best Away Win', 'Match Result', 'Away Win') as any);
+  }
+
+  // #4 Best Over 2.5
+  const s4 = over25Pool.find((c) => !usedMatches.has(c.match_id));
+  if (s4) {
+    usedMatches.add(s4.match_id);
+    slots.push({
+      ...s4,
+      prediction_id: `pred_${todayStr.replace(/-/g, '')}_${s4.match_id}_4`,
+      prediction_date: todayStr,
+      published_at_utc: new Date().toISOString(),
+      model_name: 'CalibratedEnsemble-v3.1',
+      model_version: '3.1.0',
+      data_quality_score: 0.95,
+      rank_position: 4,
+      status: 'PENDING',
+      home_final_score: null,
+      away_final_score: null,
+      settled_at_utc: null,
+      stake_units: 1.0,
+      profit_units: 0.0,
+    });
+  } else {
+    slots.push(createEmptySlot(4, 'Best Over 2.5', 'Goals Over/Under', 'Over 2.5 Goals') as any);
+  }
+
+  // #5 Best GG (BTTS Yes)
+  const s5 = bttsPool.find((c) => !usedMatches.has(c.match_id));
+  if (s5) {
+    usedMatches.add(s5.match_id);
+    slots.push({
+      ...s5,
+      prediction_id: `pred_${todayStr.replace(/-/g, '')}_${s5.match_id}_5`,
+      prediction_date: todayStr,
+      published_at_utc: new Date().toISOString(),
+      model_name: 'CalibratedEnsemble-v3.1',
+      model_version: '3.1.0',
+      data_quality_score: 0.95,
+      rank_position: 5,
+      status: 'PENDING',
+      home_final_score: null,
+      away_final_score: null,
+      settled_at_utc: null,
+      stake_units: 1.0,
+      profit_units: 0.0,
+    });
+  } else {
+    slots.push(createEmptySlot(5, 'Best GG', 'Both Teams To Score', 'BTTS Yes') as any);
+  }
+
+  return slots;
 }
 
 // POST /api/v2/predictions/generate-top5
@@ -846,48 +1040,22 @@ app.post('/api/v2/predictions/generate-top5', async (req: Request, res: Response
     const minOdds = parseFloat((req.query.min_odds as string) || '1.30');
     const maxOdds = parseFloat((req.query.max_odds as string) || '5.00');
     const minProb = parseFloat((req.query.min_prob as string) || '0.65');
-    const maxPicks = parseInt((req.query.max_picks as string) || '5', 10);
 
     const matches = await fetchFlashscoreFeed('football', 0);
     const todayStr = new Date().toISOString().split('T')[0];
 
-    const matchBestOpps: any[] = [];
-    matches.forEach((m) => {
-      const opp = generateMatchIntelligence(m, minOdds, maxOdds, minProb);
-      if (opp) matchBestOpps.push(opp);
-    });
+    const fixedSlots = runFixedAllocationOptimizer(matches, minOdds, maxOdds, minProb);
 
-    matchBestOpps.sort((a, b) => b.ranking_score - a.ranking_score);
-    const topPicks = matchBestOpps.slice(0, maxPicks);
-
-    const published: StoredPrediction[] = topPicks.map((p, idx) => {
-      const predId = `pred_${todayStr.replace(/-/g, '')}_${p.match_id}_${idx + 1}`;
-      const record: StoredPrediction = {
-        ...p,
-        prediction_id: predId,
-        prediction_date: todayStr,
-        published_at_utc: new Date().toISOString(),
-        model_name: 'CalibratedEnsemble-v2.1',
-        model_version: '2.1.0',
-        data_quality_score: 0.95,
-        rank_position: idx + 1,
-        status: 'PENDING',
-        home_final_score: null,
-        away_final_score: null,
-        settled_at_utc: null,
-        stake_units: 1.0,
-        profit_units: 0.0,
-      };
-      PREDICTIONS_STORE.set(predId, record);
-      return record;
+    fixedSlots.forEach((record) => {
+      PREDICTIONS_STORE.set(record.prediction_id, record);
     });
 
     res.json({
       prediction_date: todayStr,
       matches_evaluated: matches.length,
-      selections_published_count: published.length,
+      selections_published_count: fixedSlots.filter((s: any) => !s.is_empty_slot && s.selection !== 'NO QUALIFIED PICK').length,
       min_odds_threshold: minOdds,
-      selections: published,
+      selections: fixedSlots,
     });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -904,33 +1072,9 @@ app.get('/api/v2/predictions/top5', async (req: Request, res: Response) => {
 
     if (list.length === 0 && targetDate === new Date().toISOString().split('T')[0]) {
       const matches = await fetchFlashscoreFeed('football', 0);
-      const matchBestOpps: any[] = [];
-      matches.forEach((m) => {
-        const opp = generateMatchIntelligence(m, 1.30, 5.00, 0.65);
-        if (opp) matchBestOpps.push(opp);
-      });
-      matchBestOpps.sort((a, b) => b.ranking_score - a.ranking_score);
-      const topPicks = matchBestOpps.slice(0, 5);
-
-      topPicks.forEach((p, idx) => {
-        const predId = `pred_${targetDate.replace(/-/g, '')}_${p.match_id}_${idx + 1}`;
-        const record: StoredPrediction = {
-          ...p,
-          prediction_id: predId,
-          prediction_date: targetDate,
-          published_at_utc: new Date().toISOString(),
-          model_name: 'CalibratedEnsemble-v2.1',
-          model_version: '2.1.0',
-          data_quality_score: 0.95,
-          rank_position: idx + 1,
-          status: 'PENDING',
-          home_final_score: null,
-          away_final_score: null,
-          settled_at_utc: null,
-          stake_units: 1.0,
-          profit_units: 0.0,
-        };
-        PREDICTIONS_STORE.set(predId, record);
+      const fixedSlots = runFixedAllocationOptimizer(matches, 1.30, 5.00, 0.65);
+      fixedSlots.forEach((record) => {
+        PREDICTIONS_STORE.set(record.prediction_id, record);
         list.push(record);
       });
     }
@@ -977,19 +1121,14 @@ app.post('/api/v2/predictions/settle', async (_req: Request, res: Response) => {
 
             if (pred.market === 'Match Result') {
               if (pred.selection === 'Home Win') win = hScore > aScore;
-              else if (pred.selection === 'Draw') win = hScore === aScore;
               else if (pred.selection === 'Away Win') win = aScore > hScore;
-            } else if (pred.market === 'Double Chance') {
-              if (pred.selection === '1X') win = hScore >= aScore;
-              else if (pred.selection === 'X2') win = aScore >= hScore;
-              else if (pred.selection === '12') win = hScore !== aScore;
             } else if (pred.market === 'Goals Over/Under') {
               const tot = hScore + aScore;
-              if (pred.selection === 'Over 1.5 Goals') win = tot > 1.5;
-              else if (pred.selection === 'Over 2.5 Goals') win = tot > 2.5;
-              else if (pred.selection === 'Under 2.5 Goals') win = tot < 2.5;
+              if (pred.selection === 'Over 2.5 Goals') win = tot > 2.5;
             } else if (pred.market === 'Both Teams To Score') {
               win = (hScore > 0 && aScore > 0);
+            } else {
+              voided = true;
             }
 
             const status = voided ? 'VOID' : win ? 'WIN' : 'LOST';
@@ -1134,16 +1273,17 @@ app.post('/api/v2/models/backtest', async (_req: Request, res: Response) => {
     let losses = 0;
 
     historical.forEach((m) => {
-      const opp = generateMatchIntelligence(m, 1.30, 5.00, 0.65);
+      const opps = generateMatchIntelligence(m, 1.30, 5.00, 0.65);
+      const opp = opps && opps.length > 0 ? opps[0] : null;
       if (opp && m.home_score !== '-' && m.away_score !== '-') {
         const h = parseInt(m.home_score, 10);
         const a = parseInt(m.away_score, 10);
         if (!isNaN(h) && !isNaN(a)) {
           let win = false;
           if (opp.selection === 'Home Win') win = h > a;
-          else if (opp.selection === '1X') win = h >= a;
-          else if (opp.selection === 'Over 1.5 Goals') win = (h + a) > 1.5;
+          else if (opp.selection === 'Away Win') win = a > h;
           else if (opp.selection === 'Over 2.5 Goals') win = (h + a) > 2.5;
+          else if (opp.selection === 'BTTS Yes') win = h > 0 && a > 0;
 
           if (win) wins++;
           else losses++;

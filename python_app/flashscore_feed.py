@@ -102,7 +102,25 @@ class FlashscoreFeedScraper:
                     period_scores.append({"period": "2nd Half", "home": fields.get("BB"), "away": fields.get("BD")})
 
                 detailed_state = fields.get("AC", "")
-                elapsed_minute = fields.get("AC", "Live") if raw_status == "2" else None
+                elapsed_minute = None
+                if raw_status == "2":
+                    ac = fields.get("AC", "").strip()
+                    ts = int(fields.get("AD", 0)) if fields.get("AD", "").isdigit() else 0
+                    if ac and ac != "Live":
+                        elapsed_minute = ac
+                    elif ts > 0:
+                        diff_mins = int((time.time() - ts) / 60)
+                        if 0 < diff_mins < 120:
+                            if 45 < diff_mins <= 60:
+                                elapsed_minute = "45+"
+                            elif diff_mins > 60:
+                                elapsed_minute = str(min(90, diff_mins - 15))
+                            else:
+                                elapsed_minute = str(diff_mins)
+                        else:
+                            elapsed_minute = "45"
+                    else:
+                        elapsed_minute = "45"
                     
                 match_obj = {
                     "id": match_id,
