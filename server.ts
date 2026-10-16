@@ -1559,6 +1559,25 @@ app.get('/api/v2/live/stream', (req: Request, res: Response) => {
   });
 });
 
+// 11. Global Match Analyzer Endpoints
+app.get('/api/v2/analyzer/global', async (_req: Request, res: Response) => {
+  try {
+    const data = await runPythonBridge('get_global_analyses');
+    res.json(data);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/v2/analyzer/run', async (_req: Request, res: Response) => {
+  try {
+    const result = await runPythonBridge('run_global_analysis');
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Python Script Runner endpoint
 app.post('/api/python/run', (req: Request, res: Response) => {
   const { code } = req.body;
@@ -1635,6 +1654,19 @@ async function startServer() {
 
   server.listen(PORT, () => {
     console.log(`Flashscore API & WebSocket Server running on http://localhost:${PORT}`);
+
+    // GlobalMatchAnalyzer Background Service Loop (runs every 60s)
+    setTimeout(() => {
+      runPythonBridge('run_global_analysis').catch((err) =>
+        console.warn('Initial GlobalMatchAnalyzer background run warning:', err.message)
+      );
+    }, 3000);
+
+    setInterval(() => {
+      runPythonBridge('run_global_analysis').catch((err) =>
+        console.warn('Background GlobalMatchAnalyzer execution warning:', err.message)
+      );
+    }, 60000);
   });
 }
 

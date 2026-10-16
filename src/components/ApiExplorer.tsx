@@ -41,10 +41,24 @@ const ENDPOINTS: EndpointConfig[] = [
     },
   },
   {
-    name: 'Get Supported Sports',
+    name: "Get Supported Sports",
     method: 'GET',
     path: '/api/sports',
     description: 'Returns all sports supported by the Flashscore feed decoder',
+    defaultParams: {},
+  },
+  {
+    name: 'Global Match Analysis (All Discovered Fixtures)',
+    method: 'GET',
+    path: '/api/v2/analyzer/global',
+    description: 'Returns probabilities for Home Win, Away Win, Over 2.5, and BTTS Yes for all discovered matches stored in DB',
+    defaultParams: {},
+  },
+  {
+    name: 'Run Global Match Analysis Service',
+    method: 'POST',
+    path: '/api/v2/analyzer/run',
+    description: 'Triggers GlobalMatchAnalyzer background service to calculate probabilities across all discovered matches',
     defaultParams: {},
   },
 ];

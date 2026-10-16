@@ -130,6 +130,21 @@ def main():
         detected = engine.detect_signals_for_match(match)
         print(json.dumps({"match": match, "signals_detected": detected}))
 
+    # 10. GLOBAL MATCH ANALYSIS
+    elif action == "run_global_analysis":
+        from prediction_engine import GlobalMatchAnalyzer
+        analyzer = GlobalMatchAnalyzer()
+        # Fetch live/upcoming matches
+        matches = engine.fetch_and_enrich_live_matches(limit=50)
+        analyses = analyzer.analyze_all_discovered_fixtures(matches)
+        print(json.dumps({"success": True, "count": len(analyses), "analyses": analyses}))
+
+    elif action == "get_global_analyses":
+        from models import DatabaseManager
+        db = DatabaseManager()
+        rows = db.get_all_global_analyses()
+        print(json.dumps({"success": True, "count": len(rows), "analyses": rows}))
+
     else:
         print(json.dumps({"error": f"Unknown action: {action}"}))
         sys.exit(1)

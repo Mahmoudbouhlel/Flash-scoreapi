@@ -11,6 +11,27 @@ Production-grade football intelligence platform featuring two independent quanti
 - **Automated Settlement & Performance Tracking**: Flat 1-unit flat staking, automatic resolution, win rate, ROI, net profit units, and max drawdown.
 - **Telegram & Discord Integrations**: Secure webhook configuration, bot tokens, and instant alert dispatchers.
 
-## Running the Application
-- Development server runs on port 3000 via `npm run dev`.
-- Production build via `npm run build`.
+## Running the Application Locally
+
+### Windows (PowerShell Direct Execution)
+Run the PowerShell script directly:
+```powershell
+.\run_locally.ps1
+```
+Or:
+```powershell
+.\Run-Locally.ps1
+```
+
+### Linux / macOS / WSL
+```bash
+chmod +x run_locally.sh
+./run_locally.sh
+```
+
+### Standard npm script
+```bash
+npm install
+npm run dev
+```
+The application will launch on `http://localhost:3000`.

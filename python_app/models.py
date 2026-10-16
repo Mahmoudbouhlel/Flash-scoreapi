@@ -170,6 +170,31 @@ class DatabaseManager:
             )
         """)
 
+        # v3.2 Global Match Analysis table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS global_match_analyses (
+                match_id TEXT PRIMARY KEY,
+                league TEXT,
+                country TEXT,
+                home_team TEXT,
+                away_team TEXT,
+                kickoff_utc TEXT,
+                status TEXT,
+                home_win_probability REAL,
+                away_win_probability REAL,
+                draw_probability REAL,
+                over_2_5_probability REAL,
+                btts_yes_probability REAL,
+                home_win_odds REAL,
+                away_win_odds REAL,
+                over_2_5_odds REAL,
+                btts_yes_odds REAL,
+                model_name TEXT DEFAULT 'CalibratedEnsemble-v3.2',
+                analyzed_at TEXT,
+                FOREIGN KEY (match_id) REFERENCES matches(id)
+            )
+        """)
+
         # v2.3 Multi-Worker Lock table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS background_workers_lock (
@@ -301,3 +326,60 @@ class DatabaseManager:
             if stats_row["raw_payload"]:
                 res["stats_raw"] = json.loads(stats_row["raw_payload"])
         return res
+
+    def upsert_global_analysis(self, analysis: Dict[str, Any]):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        now_str = datetime.utcnow().isoformat()
+
+        cursor.execute("""
+            INSERT INTO global_match_analyses (
+                match_id, league, country, home_team, away_team, kickoff_utc, status,
+                home_win_probability, away_win_probability, draw_probability,
+                over_2_5_probability, btts_yes_probability,
+                home_win_odds, away_win_odds, over_2_5_odds, btts_yes_odds,
+                model_name, analyzed_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(match_id) DO UPDATE SET
+                status = excluded.status,
+                home_win_probability = excluded.home_win_probability,
+                away_win_probability = excluded.away_win_probability,
+                draw_probability = excluded.draw_probability,
+                over_2_5_probability = excluded.over_2_5_probability,
+                btts_yes_probability = excluded.btts_yes_probability,
+                home_win_odds = excluded.home_win_odds,
+                away_win_odds = excluded.away_win_odds,
+                over_2_5_odds = excluded.over_2_5_odds,
+                btts_yes_odds = excluded.btts_yes_odds,
+                analyzed_at = excluded.analyzed_at
+        """, (
+            analysis.get("match_id"),
+            analysis.get("league", ""),
+            analysis.get("country", ""),
+            analysis.get("home_team", ""),
+            analysis.get("away_team", ""),
+            analysis.get("kickoff_utc", ""),
+            analysis.get("status", "Scheduled"),
+            analysis.get("home_win_probability", 0.0),
+            analysis.get("away_win_probability", 0.0),
+            analysis.get("draw_probability", 0.0),
+            analysis.get("over_2_5_probability", 0.0),
+            analysis.get("btts_yes_probability", 0.0),
+            analysis.get("home_win_odds", 1.0),
+            analysis.get("away_win_odds", 1.0),
+            analysis.get("over_2_5_odds", 1.0),
+            analysis.get("btts_yes_odds", 1.0),
+            analysis.get("model_name", "CalibratedEnsemble-v3.2"),
+            now_str
+        ))
+        conn.commit()
+        conn.close()
+
+    def get_all_global_analyses(self) -> List[Dict[str, Any]]:
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM global_match_analyses ORDER BY kickoff_utc ASC")
+        rows = cursor.fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+
