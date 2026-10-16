@@ -1,0 +1,6 @@
+{
+  "name": "Flashscore Scraper & Python API Studio",
+  "description": "Production-ready Python API and scraper suite for Flashscore matches, live scores, fixtures, and statistics with interactive live sandbox and code export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
