@@ -302,7 +302,7 @@ export const Top5PredictionsView: React.FC = () => {
             <Calendar className="w-3.5 h-3.5 text-slate-400" />
             <input
               type="date"
-              value={selectedDate}
+              value={selectedDate ?? todayStr}
               onChange={(e) => setSelectedDate(e.target.value)}
               className="bg-transparent text-slate-200 focus:outline-none text-xs cursor-pointer"
             />
@@ -360,15 +360,15 @@ export const Top5PredictionsView: React.FC = () => {
             <div className="space-y-1.5 bg-slate-950 p-3 rounded-lg border border-slate-800/80">
               <div className="flex justify-between items-center">
                 <span className="font-semibold text-slate-300">Minimum Decimal Odds</span>
-                <span className="font-mono font-bold text-emerald-400">{minOdds.toFixed(2)}</span>
+                <span className="font-mono font-bold text-emerald-400">{(minOdds ?? 1.30).toFixed(2)}</span>
               </div>
               <input
                 type="range"
                 min="1.30"
                 max="2.50"
                 step="0.05"
-                value={minOdds}
-                onChange={(e) => setMinOdds(parseFloat(e.target.value))}
+                value={minOdds ?? 1.30}
+                onChange={(e) => setMinOdds(parseFloat(e.target.value) || 1.30)}
                 className="w-full accent-emerald-500 cursor-pointer"
               />
               <p className="text-[11px] text-slate-500">Strictly enforces decimal_odds &gt; 1.30</p>
@@ -378,15 +378,15 @@ export const Top5PredictionsView: React.FC = () => {
             <div className="space-y-1.5 bg-slate-950 p-3 rounded-lg border border-slate-800/80">
               <div className="flex justify-between items-center">
                 <span className="font-semibold text-slate-300">Maximum Decimal Odds</span>
-                <span className="font-mono font-bold text-slate-300">{maxOdds.toFixed(2)}</span>
+                <span className="font-mono font-bold text-slate-300">{(maxOdds ?? 5.00).toFixed(2)}</span>
               </div>
               <input
                 type="range"
                 min="2.00"
                 max="8.00"
                 step="0.25"
-                value={maxOdds}
-                onChange={(e) => setMaxOdds(parseFloat(e.target.value))}
+                value={maxOdds ?? 5.00}
+                onChange={(e) => setMaxOdds(parseFloat(e.target.value) || 5.00)}
                 className="w-full accent-emerald-500 cursor-pointer"
               />
               <p className="text-[11px] text-slate-500">Upper bound prevents high-variance longshots</p>
@@ -396,15 +396,15 @@ export const Top5PredictionsView: React.FC = () => {
             <div className="space-y-1.5 bg-slate-950 p-3 rounded-lg border border-slate-800/80">
               <div className="flex justify-between items-center">
                 <span className="font-semibold text-slate-300">Min Calibrated Prob</span>
-                <span className="font-mono font-bold text-teal-400">{(minProb * 100).toFixed(0)}%</span>
+                <span className="font-mono font-bold text-teal-400">{((minProb ?? 0.65) * 100).toFixed(0)}%</span>
               </div>
               <input
                 type="range"
                 min="0.55"
                 max="0.85"
                 step="0.05"
-                value={minProb}
-                onChange={(e) => setMinProb(parseFloat(e.target.value))}
+                value={minProb ?? 0.65}
+                onChange={(e) => setMinProb(parseFloat(e.target.value) || 0.65)}
                 className="w-full accent-emerald-500 cursor-pointer"
               />
               <p className="text-[11px] text-slate-500">Requires high probability of winning</p>
@@ -414,15 +414,15 @@ export const Top5PredictionsView: React.FC = () => {
             <div className="space-y-1.5 bg-slate-950 p-3 rounded-lg border border-slate-800/80">
               <div className="flex justify-between items-center">
                 <span className="font-semibold text-slate-300">Max Daily Selections</span>
-                <span className="font-mono font-bold text-white">{maxPicks}</span>
+                <span className="font-mono font-bold text-white">{maxPicks ?? 5}</span>
               </div>
               <input
                 type="range"
                 min="1"
                 max="5"
                 step="1"
-                value={maxPicks}
-                onChange={(e) => setMaxPicks(parseInt(e.target.value, 10))}
+                value={maxPicks ?? 5}
+                onChange={(e) => setMaxPicks(parseInt(e.target.value, 10) || 5)}
                 className="w-full accent-emerald-500 cursor-pointer"
               />
               <p className="text-[11px] text-slate-500">Quality-filtered: published list cap is 5</p>

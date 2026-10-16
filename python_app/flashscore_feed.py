@@ -35,11 +35,21 @@ STATUS_MAP = {
     "3": "Finished",
     "4": "Postponed",
     "5": "Cancelled",
-    "6": "Interrupted",
-    "7": "Abandoned",
-    "8": "Suspended",
-    "9": "Awarded",
-    "10": "Delayed"
+    "6": "Half Time",
+    "7": "Finished (AET)",
+    "8": "Finished (AP)",
+    "9": "Walkover",
+    "10": "Interrupted",
+    "11": "Abandoned",
+    "12": "TBA",
+    "13": "Pause",
+    "14": "1st Half",
+    "15": "2nd Half",
+    "16": "ET 1st Half",
+    "17": "ET 2nd Half",
+    "18": "Penalties",
+    "38": "Half Time",
+    "46": "Break"
 }
 
 class FlashscoreFeedScraper:
@@ -65,6 +75,10 @@ class FlashscoreFeedScraper:
         current_country = "Global"
         current_tournament_id = ""
         matches = []
+
+        live_codes = {"2", "6", "13", "14", "15", "16", "17", "18", "38", "46"}
+        finished_codes = {"3", "7", "8", "9"}
+        scheduled_codes = {"1", "12"}
         
         for block in blocks:
             fields = {}
@@ -83,13 +97,13 @@ class FlashscoreFeedScraper:
             if "AA" in fields:
                 match_id = fields.get("AA")
                 raw_status = fields.get("AB", "1")
-                status_text = STATUS_MAP.get(raw_status, "Unknown")
+                status_text = STATUS_MAP.get(raw_status, "Live" if raw_status in live_codes else "Scheduled")
                 
-                if status_filter == "live" and raw_status != "2":
+                if status_filter == "live" and raw_status not in live_codes:
                     continue
-                elif status_filter == "finished" and raw_status != "3":
+                elif status_filter == "finished" and raw_status not in finished_codes:
                     continue
-                elif status_filter == "scheduled" and raw_status != "1":
+                elif status_filter == "scheduled" and raw_status not in scheduled_codes:
                     continue
 
                 home_score = fields.get("AG", "-")
@@ -103,24 +117,44 @@ class FlashscoreFeedScraper:
 
                 detailed_state = fields.get("AC", "")
                 elapsed_minute = None
-                if raw_status == "2":
+                
+                if raw_status in live_codes:
                     ac = fields.get("AC", "").strip()
                     ts = int(fields.get("AD", 0)) if fields.get("AD", "").isdigit() else 0
-                    if ac and ac != "Live":
-                        elapsed_minute = ac
-                    elif ts > 0:
-                        diff_mins = int((time.time() - ts) / 60)
-                        if 0 < diff_mins < 120:
-                            if 45 < diff_mins <= 60:
-                                elapsed_minute = "45+"
-                            elif diff_mins > 60:
-                                elapsed_minute = str(min(90, diff_mins - 15))
-                            else:
-                                elapsed_minute = str(diff_mins)
+                    if raw_status in ("6", "38") or ac == "HT" or "half time" in ac.lower():
+                        elapsed_minute = "HT"
+                    elif raw_status == "14" or ac == "1" or ac == "1HT" or "1st" in ac.lower():
+                        minute_val = 1
+                        if ac.isdigit():
+                            minute_val = int(ac)
+                        elif ts > 0:
+                            diff_secs = max(0, int(time.time() - ts))
+                            minute_val = (diff_secs // 60) + 1
+                        elapsed_minute = f"1HT 45+{minute_val-45}'" if minute_val > 45 else f"1HT {max(1, minute_val)}'"
+                    elif raw_status == "15" or ac == "2" or ac == "2HT" or "2nd" in ac.lower():
+                        minute_val = 46
+                        if ac.isdigit():
+                            minute_val = int(ac)
+                        elif ts > 0:
+                            diff_secs = max(0, int(time.time() - ts))
+                            diff_mins = diff_secs // 60
+                            minute_val = 45 + diff_mins if diff_mins <= 45 else diff_mins
+                        elapsed_minute = f"2HT 90+{minute_val-90}'" if minute_val > 90 else f"2HT {max(46, minute_val)}'"
+                    elif ac and ac != "Live":
+                        if ac.startswith("1HT") or ac.startswith("2HT") or ac in ("HT", "FT"):
+                            elapsed_minute = ac
+                        elif ac.isdigit():
+                            num = int(ac)
+                            elapsed_minute = f"1HT {num}'" if num <= 45 else f"2HT {num}'"
                         else:
-                            elapsed_minute = "45"
+                            elapsed_minute = ac if ac.endswith("'") else f"{ac}'"
+                    elif ts > 0:
+                        diff_mins = max(1, (int(time.time() - ts) // 60) + 1)
+                        elapsed_minute = f"1HT {diff_mins}'" if diff_mins <= 45 else f"2HT {diff_mins}'"
                     else:
-                        elapsed_minute = "45"
+                        elapsed_minute = "Live"
+                elif raw_status in finished_codes:
+                    elapsed_minute = "FT"
                     
                 match_obj = {
                     "id": match_id,

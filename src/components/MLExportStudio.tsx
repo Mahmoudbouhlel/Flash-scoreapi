@@ -163,7 +163,7 @@ for feature, imp in zip(feature_cols, clf.feature_importances_):
           <div className="flex items-center gap-2 text-xs">
             <span className="text-slate-400">Rows:</span>
             <select
-              value={limit}
+              value={limit ?? 20}
               onChange={(e) => setLimit(Number(e.target.value))}
               className="bg-slate-950 border border-slate-800 text-slate-300 rounded-lg px-2.5 py-1 text-xs focus:outline-none"
             >

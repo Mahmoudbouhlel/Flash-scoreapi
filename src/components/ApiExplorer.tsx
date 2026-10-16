@@ -256,7 +256,7 @@ console.log(data);
                     </label>
                     {key === 'sport' ? (
                       <select
-                        value={val}
+                        value={val ?? 'football'}
                         onChange={(e) => handleParamChange(key, e.target.value)}
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
                       >
@@ -270,7 +270,7 @@ console.log(data);
                       </select>
                     ) : key === 'status' ? (
                       <select
-                        value={val}
+                        value={val ?? 'all'}
                         onChange={(e) => handleParamChange(key, e.target.value)}
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
                       >
@@ -282,7 +282,7 @@ console.log(data);
                     ) : (
                       <input
                         type="text"
-                        value={val}
+                        value={val ?? ''}
                         onChange={(e) => handleParamChange(key, e.target.value)}
                         className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-slate-200 font-mono focus:outline-none focus:border-emerald-500"
                       />

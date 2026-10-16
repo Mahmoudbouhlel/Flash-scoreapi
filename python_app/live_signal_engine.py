@@ -620,7 +620,7 @@ class LiveSignalEngine:
                 "league": league,
                 "home_team": home_team,
                 "away_team": away_team,
-                "minute": str(minute),
+                "minute": f"1HT {minute}'" if minute <= 45 else f"2HT {minute}'",
                 "score_at_signal": f"{home_score} - {away_score}",
                 "engine_code": s["engine_code"],
                 "market": s["market"],
@@ -1183,6 +1183,12 @@ class LiveSignalEngine:
                     d["triggering_evidence"] = json.loads(d["triggering_evidence"])
                 except Exception:
                     pass
+            raw_m = str(d.get("minute", "")).replace("'", "").strip()
+            if raw_m.isdigit():
+                m_num = int(raw_m)
+                d["minute"] = f"1HT {m_num}'" if m_num <= 45 else f"2HT {m_num}'"
+            elif raw_m and not raw_m.startswith("1HT") and not raw_m.startswith("2HT") and raw_m not in ("HT", "FT"):
+                d["minute"] = f"{raw_m}'"
             res.append(d)
         return res
 

@@ -104,12 +104,30 @@ const ENGINE_META: Record<
   },
 };
 
+const DEFAULT_AUTOMATION_SETTINGS: AutomationSettings = {
+  telegram_enabled: false,
+  telegram_token: '',
+  telegram_chat_id: '',
+  telegram_thread_id: '',
+  discord_enabled: false,
+  discord_webhook_url: '',
+  min_odds: 1.30,
+  max_odds: 5.0,
+  min_ev: 0.03,
+  min_prob: 0.55,
+  auto_dispatch: false,
+  quiet_hours_enabled: false,
+  quiet_hours_start: 0,
+  quiet_hours_end: 8,
+  enabled_engines: ['1H_GOALS', '2H_GOALS', 'LATE_1H', 'LATE_2H', 'COMEBACK', 'MOMENTUM_SHIFT', 'NEXT_GOAL'],
+};
+
 export const LiveSignalsCockpit: React.FC = () => {
   const [subTab, setSubTab] = useState<'radar' | 'matches' | 'ledger' | 'automation' | 'simulator'>('radar');
   const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
   const [signals, setSignals] = useState<LiveSignal[]>([]);
   const [performance, setPerformance] = useState<LiveSignalsPerformance | null>(null);
-  const [settings, setSettings] = useState<AutomationSettings | null>(null);
+  const [settings, setSettings] = useState<AutomationSettings>(DEFAULT_AUTOMATION_SETTINGS);
   const [loading, setLoading] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [settling, setSettling] = useState(false);
@@ -162,7 +180,7 @@ export const LiveSignalsCockpit: React.FC = () => {
       if (matchesRes.success) setLiveMatches(matchesRes.matches || []);
       if (signalsRes.success) setSignals(signalsRes.signals || []);
       if (perfRes.success) setPerformance(perfRes.performance || null);
-      if (setRes.success) setSettings(setRes.settings || null);
+      if (setRes.success && setRes.settings) setSettings((prev) => ({ ...DEFAULT_AUTOMATION_SETTINGS, ...prev, ...setRes.settings }));
     } catch (e: any) {
       console.error('Failed to load core live data:', e);
     } finally {
@@ -658,7 +676,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="px-2 py-0.5 rounded-full text-[11px] font-black bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                            {sig.minute}' Live
+                            {typeof sig.minute === 'number' ? (sig.minute <= 45 ? `1HT ${sig.minute}'` : `2HT ${sig.minute}'`) : String(sig.minute).includes('HT') ? sig.minute : `${sig.minute}'`}
                           </span>
                           <span className="text-xs font-black text-white bg-slate-800 px-2 py-0.5 rounded">
                             {sig.score_at_signal}
@@ -800,7 +818,7 @@ export const LiveSignalsCockpit: React.FC = () => {
               <input
                 type="text"
                 placeholder="Search team or league..."
-                value={matchSearch}
+                value={matchSearch ?? ''}
                 onChange={(e) => setMatchSearch(e.target.value)}
                 className="px-3 py-1.5 text-xs rounded-xl bg-slate-950 border border-slate-800 text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500 w-48"
               />
@@ -874,7 +892,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                       <span className="px-2 py-0.5 text-xs font-black rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30">
-                        {m.elapsed_minute || 'Live'}
+                        {m.elapsed_minute ? (m.elapsed_minute.includes('HT') || m.elapsed_minute.includes('FT') ? m.elapsed_minute : (parseInt(m.elapsed_minute, 10) <= 45 ? `1HT ${m.elapsed_minute}'` : `2HT ${m.elapsed_minute}'`)) : 'Live'}
                       </span>
                       <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                         LIVE
@@ -1078,7 +1096,7 @@ export const LiveSignalsCockpit: React.FC = () => {
             <input
               type="text"
               placeholder="Search by team, league, selection, or market..."
-              value={ledgerSearch}
+              value={ledgerSearch ?? ''}
               onChange={(e) => setLedgerSearch(e.target.value)}
               className="w-full px-4 py-2 text-xs rounded-xl bg-slate-900 border border-slate-800 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
             />
@@ -1222,7 +1240,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={settings.telegram_enabled}
+                      checked={!!settings.telegram_enabled}
                       onChange={(e) => setSettings({ ...settings, telegram_enabled: e.target.checked })}
                       className="rounded border-slate-700 text-emerald-500 focus:ring-0"
                     />
@@ -1236,7 +1254,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                     <input
                       type="password"
                       placeholder="e.g. 123456789:ABCdefGHIjklMNOpqrSTUvwxYZ"
-                      value={settings.telegram_token}
+                      value={settings.telegram_token ?? ''}
                       onChange={(e) => setSettings({ ...settings, telegram_token: e.target.value })}
                       className="w-full px-3 py-2 text-xs rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500"
                     />
@@ -1247,7 +1265,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                     <input
                       type="text"
                       placeholder="e.g. -1001234567890 or @channelusername"
-                      value={settings.telegram_chat_id}
+                      value={settings.telegram_chat_id ?? ''}
                       onChange={(e) => setSettings({ ...settings, telegram_chat_id: e.target.value })}
                       className="w-full px-3 py-2 text-xs rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500"
                     />
@@ -1258,7 +1276,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                     <input
                       type="text"
                       placeholder="e.g. 42 (for forum topics)"
-                      value={settings.telegram_thread_id || ''}
+                      value={settings.telegram_thread_id ?? ''}
                       onChange={(e) => setSettings({ ...settings, telegram_thread_id: e.target.value })}
                       className="w-full px-3 py-2 text-xs rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-cyan-500"
                     />
@@ -1292,7 +1310,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={settings.discord_enabled}
+                      checked={!!settings.discord_enabled}
                       onChange={(e) => setSettings({ ...settings, discord_enabled: e.target.checked })}
                       className="rounded border-slate-700 text-emerald-500 focus:ring-0"
                     />
@@ -1306,7 +1324,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                     <input
                       type="password"
                       placeholder="https://discord.com/api/webhooks/123456789/token..."
-                      value={settings.discord_webhook_url}
+                      value={settings.discord_webhook_url ?? ''}
                       onChange={(e) => setSettings({ ...settings, discord_webhook_url: e.target.value })}
                       className="w-full px-3 py-2 text-xs rounded-xl bg-slate-950 border border-slate-800 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500"
                     />
@@ -1349,7 +1367,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                     type="number"
                     step="0.05"
                     min="1.30"
-                    value={settings.min_odds}
+                    value={settings.min_odds ?? 1.30}
                     onChange={(e) => setSettings({ ...settings, min_odds: parseFloat(e.target.value) || 1.30 })}
                     className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono"
                   />
@@ -1361,7 +1379,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                   <input
                     type="number"
                     step="0.01"
-                    value={settings.min_ev}
+                    value={settings.min_ev ?? 0.03}
                     onChange={(e) => setSettings({ ...settings, min_ev: parseFloat(e.target.value) || 0.03 })}
                     className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono"
                   />
@@ -1373,7 +1391,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                   <input
                     type="number"
                     step="0.05"
-                    value={settings.min_prob}
+                    value={settings.min_prob ?? 0.55}
                     onChange={(e) => setSettings({ ...settings, min_prob: parseFloat(e.target.value) || 0.55 })}
                     className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-white font-mono"
                   />
@@ -1384,7 +1402,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={settings.auto_dispatch}
+                      checked={!!settings.auto_dispatch}
                       onChange={(e) => setSettings({ ...settings, auto_dispatch: e.target.checked })}
                       className="rounded border-slate-700 text-emerald-500 focus:ring-0"
                     />
@@ -1401,7 +1419,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                 <label className="text-xs font-semibold text-slate-300 block mb-2">Enabled Detection Engines</label>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                   {Object.entries(ENGINE_META).map(([code, meta]) => {
-                    const isChecked = settings.enabled_engines?.includes(code);
+                    const isChecked = !!settings.enabled_engines?.includes(code);
                     return (
                       <label
                         key={code}
@@ -1469,7 +1487,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                     <label className="text-slate-400 block mb-1">Home Team</label>
                     <input
                       type="text"
-                      value={simForm.home_team}
+                      value={simForm.home_team ?? ''}
                       onChange={(e) => setSimForm({ ...simForm, home_team: e.target.value })}
                       className="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-white"
                     />
@@ -1478,7 +1496,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                     <label className="text-slate-400 block mb-1">Away Team</label>
                     <input
                       type="text"
-                      value={simForm.away_team}
+                      value={simForm.away_team ?? ''}
                       onChange={(e) => setSimForm({ ...simForm, away_team: e.target.value })}
                       className="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-white"
                     />
@@ -1490,7 +1508,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                     <label className="text-slate-400 block mb-1">Minute</label>
                     <input
                       type="number"
-                      value={simForm.minute}
+                      value={simForm.minute ?? 0}
                       onChange={(e) => setSimForm({ ...simForm, minute: parseInt(e.target.value) || 0 })}
                       className="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-white"
                     />
@@ -1499,7 +1517,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                     <label className="text-slate-400 block mb-1">Home Score</label>
                     <input
                       type="number"
-                      value={simForm.home_score}
+                      value={simForm.home_score ?? 0}
                       onChange={(e) => setSimForm({ ...simForm, home_score: parseInt(e.target.value) || 0 })}
                       className="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-white"
                     />
@@ -1508,7 +1526,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                     <label className="text-slate-400 block mb-1">Away Score</label>
                     <input
                       type="number"
-                      value={simForm.away_score}
+                      value={simForm.away_score ?? 0}
                       onChange={(e) => setSimForm({ ...simForm, away_score: parseInt(e.target.value) || 0 })}
                       className="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-white"
                     />
@@ -1521,7 +1539,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                     <input
                       type="number"
                       step="0.05"
-                      value={simForm.home_xg}
+                      value={simForm.home_xg ?? 0}
                       onChange={(e) => setSimForm({ ...simForm, home_xg: parseFloat(e.target.value) || 0 })}
                       className="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono"
                     />
@@ -1531,7 +1549,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                     <input
                       type="number"
                       step="0.05"
-                      value={simForm.away_xg}
+                      value={simForm.away_xg ?? 0}
                       onChange={(e) => setSimForm({ ...simForm, away_xg: parseFloat(e.target.value) || 0 })}
                       className="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-white font-mono"
                     />
@@ -1543,7 +1561,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                     <label className="text-slate-400 block mb-1">Home SOT</label>
                     <input
                       type="number"
-                      value={simForm.home_shots_on_target}
+                      value={simForm.home_shots_on_target ?? 0}
                       onChange={(e) => setSimForm({ ...simForm, home_shots_on_target: parseInt(e.target.value) || 0 })}
                       className="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-white"
                     />
@@ -1552,7 +1570,7 @@ export const LiveSignalsCockpit: React.FC = () => {
                     <label className="text-slate-400 block mb-1">Away SOT</label>
                     <input
                       type="number"
-                      value={simForm.away_shots_on_target}
+                      value={simForm.away_shots_on_target ?? 0}
                       onChange={(e) => setSimForm({ ...simForm, away_shots_on_target: parseInt(e.target.value) || 0 })}
                       className="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-white"
                     />

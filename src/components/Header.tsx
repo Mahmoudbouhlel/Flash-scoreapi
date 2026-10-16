@@ -1,30 +1,33 @@
 import React from 'react';
 import {
-  Activity,
-  Code,
-  Terminal,
-  Play,
-  ShieldCheck,
-  Download,
-  BrainCircuit,
-  Trophy,
-  Server,
-  Target,
-  Sparkles,
+  LayoutDashboard,
+  Layers,
   Radio,
+  Zap,
+  Target,
+  History,
+  Brain,
+  BarChart2,
+  Database,
+  Bot,
+  Activity,
+  Settings,
+  Download,
 } from 'lucide-react';
 
 export type TabType =
-  | 'live'
+  | 'overview'
+  | 'allMatches'
+  | 'liveCenter'
+  | 'radar'
   | 'top5'
-  | 'sandbox'
-  | 'ml'
-  | 'standings'
+  | 'history'
+  | 'modelLab'
+  | 'backtest'
+  | 'dataQuality'
+  | 'integrations'
   | 'health'
-  | 'studio'
-  | 'runner'
-  | 'explorer'
-  | 'guide';
+  | 'settings';
 
 interface HeaderProps {
   activeTab: TabType;
@@ -41,8 +44,28 @@ export const Header: React.FC<HeaderProps> = ({
   onDownloadAllZip,
   isDownloadingZip,
 }) => {
+  const navItems: { id: TabType; label: string; icon: React.ReactNode; badge?: string | number }[] = [
+    { id: 'overview', label: 'Overview', icon: <LayoutDashboard className="w-3.5 h-3.5 text-emerald-400" /> },
+    { id: 'allMatches', label: 'All Matches', icon: <Layers className="w-3.5 h-3.5 text-emerald-400" /> },
+    {
+      id: 'liveCenter',
+      label: 'Live Center',
+      icon: <Radio className="w-3.5 h-3.5 text-emerald-400" />,
+      badge: liveCount > 0 ? `${liveCount}` : undefined,
+    },
+    { id: 'radar', label: 'Signal Radar', icon: <Zap className="w-3.5 h-3.5 text-teal-400" /> },
+    { id: 'top5', label: 'AI Daily Top 5', icon: <Target className="w-3.5 h-3.5 text-emerald-400" /> },
+    { id: 'history', label: 'Prediction History', icon: <History className="w-3.5 h-3.5 text-emerald-400" /> },
+    { id: 'modelLab', label: 'Model Lab', icon: <Brain className="w-3.5 h-3.5 text-violet-400" /> },
+    { id: 'backtest', label: 'Backtesting', icon: <BarChart2 className="w-3.5 h-3.5 text-emerald-400" /> },
+    { id: 'dataQuality', label: 'Data Quality', icon: <Database className="w-3.5 h-3.5 text-emerald-400" /> },
+    { id: 'integrations', label: 'Telegram & Discord', icon: <Bot className="w-3.5 h-3.5 text-sky-400" /> },
+    { id: 'health', label: 'System Health', icon: <Activity className="w-3.5 h-3.5 text-emerald-400" /> },
+    { id: 'settings', label: 'Settings', icon: <Settings className="w-3.5 h-3.5 text-slate-400" /> },
+  ];
+
   return (
-    <header className="border-b border-slate-800 bg-slate-950/90 backdrop-blur-md sticky top-0 z-40">
+    <header className="border-b border-slate-800 bg-slate-950/95 backdrop-blur-md sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Brand */}
@@ -55,15 +78,15 @@ export const Header: React.FC<HeaderProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-1.5">
-                  Flashscore <span className="text-emerald-400">Deep Live Tracker</span>
+                  Flashscore <span className="text-emerald-400">Football Intelligence PRO</span>
                 </h1>
                 <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  v2.2 Live Radar &amp; Automation
+                  v3.3 PRO
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Real-Time Live Signals • Telegram &amp; Discord Automation • Odds &gt; 1.30 • AI Daily Top 5 • ML Exporter
+                Real-Time Clock Sync • Calibrated Poisson/Elo Ensemble • Daily Top 5 • Global Match Analyzer
               </p>
             </div>
           </div>
@@ -82,140 +105,30 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex items-center space-x-1 sm:space-x-1.5 border-t border-slate-800/80 pt-2 pb-2.5 overflow-x-auto scrollbar-none">
-          {/* Live Signals & Automation Primary Tab (v2.2) */}
-          <button
-            onClick={() => onSelectTab('live')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
-              activeTab === 'live'
-                ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm font-bold ring-1 ring-emerald-500/30'
-                : 'text-slate-300 hover:text-white hover:bg-slate-900 border border-slate-800'
-            }`}
-          >
-            <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-            <span>LIVE RADAR &amp; SIGNALS</span>
-            <span className="ml-1 px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
-              v2.2
-            </span>
-          </button>
-
-          {/* AI Daily Top 5 Primary Tab */}
-          <button
-            onClick={() => onSelectTab('top5')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
-              activeTab === 'top5'
-                ? 'bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm font-bold ring-1 ring-emerald-500/30'
-                : 'text-slate-300 hover:text-white hover:bg-slate-900 border border-slate-800'
-            }`}
-          >
-            <Target className="w-3.5 h-3.5 text-emerald-400" />
-            <span>AI DAILY TOP 5</span>
-            <span className="ml-1 px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold">
-              AI ENGINE
-            </span>
-          </button>
-
-          <button
-            onClick={() => onSelectTab('sandbox')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
-              activeTab === 'sandbox'
-                ? 'bg-slate-800 text-emerald-400 border border-slate-700 shadow-sm font-semibold'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
-          >
-            <Activity className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Live Matches &amp; Deep Stats</span>
-            {liveCount > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 text-[10px] font-bold animate-pulse">
-                {liveCount} Live
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => onSelectTab('ml')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
-              activeTab === 'ml'
-                ? 'bg-slate-800 text-violet-400 border border-slate-700 shadow-sm font-semibold'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
-          >
-            <BrainCircuit className="w-3.5 h-3.5 text-violet-400" />
-            <span>ML Dataset Exporter</span>
-          </button>
-
-          <button
-            onClick={() => onSelectTab('standings')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
-              activeTab === 'standings'
-                ? 'bg-slate-800 text-amber-400 border border-slate-700 shadow-sm font-semibold'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
-          >
-            <Trophy className="w-3.5 h-3.5 text-amber-400" />
-            <span>Standings & Form</span>
-          </button>
-
-          <button
-            onClick={() => onSelectTab('health')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
-              activeTab === 'health'
-                ? 'bg-slate-800 text-cyan-400 border border-slate-700 shadow-sm font-semibold'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
-          >
-            <Server className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Health & WebSocket</span>
-          </button>
-
-          <button
-            onClick={() => onSelectTab('studio')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
-              activeTab === 'studio'
-                ? 'bg-slate-800 text-emerald-400 border border-slate-700 shadow-sm font-semibold'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
-          >
-            <Code className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Python Code Studio</span>
-          </button>
-
-          <button
-            onClick={() => onSelectTab('runner')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
-              activeTab === 'runner'
-                ? 'bg-slate-800 text-amber-400 border border-slate-700 shadow-sm font-semibold'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
-          >
-            <Terminal className="w-3.5 h-3.5 text-amber-400" />
-            <span>Live Python Runner</span>
-          </button>
-
-          <button
-            onClick={() => onSelectTab('explorer')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
-              activeTab === 'explorer'
-                ? 'bg-slate-800 text-violet-400 border border-slate-700 shadow-sm font-semibold'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
-          >
-            <Play className="w-3.5 h-3.5 text-violet-400" />
-            <span>Swagger API</span>
-          </button>
-
-          <button
-            onClick={() => onSelectTab('guide')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
-              activeTab === 'guide'
-                ? 'bg-slate-800 text-blue-400 border border-slate-700 shadow-sm font-semibold'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-            <span>Protocol Guide</span>
-          </button>
+        {/* 12 Navigation Tabs */}
+        <div className="flex items-center space-x-1 border-t border-slate-800/80 pt-2 pb-2.5 overflow-x-auto scrollbar-none">
+          {navItems.map((item) => {
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => onSelectTab(item.id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap cursor-pointer ${
+                  isActive
+                    ? 'bg-slate-800 text-emerald-300 border border-emerald-500/30 shadow-sm font-bold ring-1 ring-emerald-500/20'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900 border border-slate-800/50'
+                }`}
+              >
+                {item.icon}
+                <span>{item.label}</span>
+                {item.badge && (
+                  <span className="ml-1 px-1.5 py-0.2 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-bold animate-pulse">
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
     </header>

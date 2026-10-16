@@ -304,7 +304,7 @@ export const LiveScraperSandbox: React.FC<LiveScraperSandboxProps> = () => {
             <input
               type="text"
               placeholder="Search team or league..."
-              value={searchTerm}
+              value={searchTerm ?? ''}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
             />

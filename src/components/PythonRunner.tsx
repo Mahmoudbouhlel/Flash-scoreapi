@@ -241,7 +241,7 @@ export const PythonRunner: React.FC<PythonRunnerProps> = ({ initialCode }) => {
 
           <div className="flex-1 p-3 bg-slate-950">
             <textarea
-              value={code}
+              value={code ?? ''}
               onChange={(e) => setCode(e.target.value)}
               onKeyDown={(e) => {
                 if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {

@@ -1,23 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { Header, TabType } from './components/Header';
+import { OverviewView } from './components/OverviewView';
+import { AllMatchesView } from './components/AllMatchesView';
 import { LiveSignalsCockpit } from './components/LiveSignalsCockpit';
 import { Top5PredictionsView } from './components/Top5PredictionsView';
-import { LiveScraperSandbox } from './components/LiveScraperSandbox';
-import { PythonApiStudio } from './components/PythonApiStudio';
-import { PythonRunner } from './components/PythonRunner';
-import { ApiExplorer } from './components/ApiExplorer';
-import { ProtocolGuide } from './components/ProtocolGuide';
-import { MLExportStudio } from './components/MLExportStudio';
-import { StandingsView } from './components/StandingsView';
+import { PredictionHistoryView } from './components/PredictionHistoryView';
+import { ModelLabView } from './components/ModelLabView';
+import { BacktestingView } from './components/BacktestingView';
+import { DataQualityView } from './components/DataQualityView';
+import { TelegramDiscordView } from './components/TelegramDiscordView';
+import { SettingsView } from './components/SettingsView';
 import { ProviderHealthMonitor } from './components/ProviderHealthMonitor';
 import { WebSocketStreamConsole } from './components/WebSocketStreamConsole';
 import { PYTHON_TEMPLATES } from './python_templates';
 import JSZip from 'jszip';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<TabType>('live');
+  const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [liveCount, setLiveCount] = useState<number>(0);
-  const [runnerInitialCode, setRunnerInitialCode] = useState<string>('');
   const [isDownloadingZip, setIsDownloadingZip] = useState<boolean>(false);
 
   // Poll live count periodically
@@ -65,11 +65,6 @@ export default function App() {
     }
   };
 
-  const handleOpenRunnerWithCode = (code: string) => {
-    setRunnerInitialCode(code);
-    setActiveTab('runner');
-  };
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30 selection:text-emerald-300">
       {/* Top Header */}
@@ -83,15 +78,25 @@ export default function App() {
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeTab === 'live' && <LiveSignalsCockpit />}
+        {activeTab === 'overview' && <OverviewView onNavigate={(t) => setActiveTab(t as TabType)} />}
+
+        {activeTab === 'allMatches' && <AllMatchesView />}
+
+        {activeTab === 'liveCenter' && <LiveSignalsCockpit />}
+
+        {activeTab === 'radar' && <LiveSignalsCockpit />}
 
         {activeTab === 'top5' && <Top5PredictionsView />}
 
-        {activeTab === 'sandbox' && <LiveScraperSandbox />}
+        {activeTab === 'history' && <PredictionHistoryView />}
 
-        {activeTab === 'ml' && <MLExportStudio />}
+        {activeTab === 'modelLab' && <ModelLabView />}
 
-        {activeTab === 'standings' && <StandingsView />}
+        {activeTab === 'backtest' && <BacktestingView />}
+
+        {activeTab === 'dataQuality' && <DataQualityView />}
+
+        {activeTab === 'integrations' && <TelegramDiscordView />}
 
         {activeTab === 'health' && (
           <div className="space-y-6">
@@ -100,17 +105,7 @@ export default function App() {
           </div>
         )}
 
-        {activeTab === 'studio' && (
-          <PythonApiStudio onOpenRunnerWithCode={handleOpenRunnerWithCode} />
-        )}
-
-        {activeTab === 'runner' && (
-          <PythonRunner initialCode={runnerInitialCode} key={runnerInitialCode} />
-        )}
-
-        {activeTab === 'explorer' && <ApiExplorer />}
-
-        {activeTab === 'guide' && <ProtocolGuide />}
+        {activeTab === 'settings' && <SettingsView />}
       </main>
 
       {/* Footer */}
@@ -118,53 +113,41 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span>Flashscore Deep Live Tracker &amp; Real-Time Intelligence v2.2</span>
+            <span>Flashscore Football Intelligence PRO v3.3</span>
             <span className="text-slate-700">|</span>
-            <span>Live Radar • Telegram &amp; Discord Automation • Odds &gt; 1.30 • AI Daily Top 5</span>
+            <span>Real-Time Clock • Daily Top 5 • Global Match Analyzer • Calibrated Ensemble</span>
           </div>
 
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setActiveTab('live')}
+              onClick={() => setActiveTab('overview')}
               className="text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer"
             >
-              Live Radar
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('allMatches')}
+              className="text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer"
+            >
+              All Matches
             </button>
             <button
               onClick={() => setActiveTab('top5')}
               className="text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer"
             >
-              AI Top 5
+              Daily Top 5
             </button>
             <button
-              onClick={() => setActiveTab('sandbox')}
+              onClick={() => setActiveTab('modelLab')}
               className="text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer"
             >
-              Live Matches
+              Model Lab
             </button>
             <button
-              onClick={() => setActiveTab('ml')}
+              onClick={() => setActiveTab('settings')}
               className="text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer"
             >
-              ML Dataset
-            </button>
-            <button
-              onClick={() => setActiveTab('standings')}
-              className="text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer"
-            >
-              Standings
-            </button>
-            <button
-              onClick={() => setActiveTab('health')}
-              className="text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer"
-            >
-              Health &amp; WS
-            </button>
-            <button
-              onClick={() => setActiveTab('studio')}
-              className="text-slate-400 hover:text-emerald-400 transition-colors cursor-pointer"
-            >
-              Export Code
+              Settings
             </button>
           </div>
         </div>
