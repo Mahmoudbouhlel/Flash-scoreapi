@@ -113,9 +113,9 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span>Flashscore Football Intelligence PRO v3.3</span>
+            <span>Flashscore Football Intelligence PRO v4.0</span>
             <span className="text-slate-700">|</span>
-            <span>Real-Time Clock • Daily Top 5 • Global Match Analyzer • Calibrated Ensemble</span>
+            <span>Real-Time Clock • Star Matches • Bivariate Dixon-Coles • Daily Predictions</span>
           </div>
 
           <div className="flex items-center gap-4">

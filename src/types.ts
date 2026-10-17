@@ -1,5 +1,21 @@
+export interface PreMatchStats {
+  home_form?: string[];
+  away_form?: string[];
+  h2h_matches?: Array<{ date: string; home: string; away: string; score: string; winner: string }>;
+  home_attack_rating?: number;
+  away_attack_rating?: number;
+  home_defense_rating?: number;
+  away_defense_rating?: number;
+  poisson_home_lambda?: number;
+  poisson_away_mu?: number;
+  dixon_coles_corr?: number;
+  home_form_pts_avg?: number;
+  away_form_pts_avg?: number;
+}
+
 export interface Match {
   id: string;
+  sport?: string;
   league: string;
   country: string;
   tournament_id?: string;
@@ -12,9 +28,11 @@ export interface Match {
   detailed_state?: string;
   elapsed_minute: string | null;
   timestamp: number | null;
-  periods: Array<{ period: string; home: string; away: string }>;
-  winner: 'home' | 'away' | null;
+  periods?: Array<{ period: string; home: string; away: string }>;
+  winner?: 'home' | 'away' | null;
   url: string;
+  is_starred?: boolean;
+  pre_match_stats?: PreMatchStats;
   // Quick stats summary if available
   stats_summary?: {
     home_xg?: number;
@@ -256,6 +274,8 @@ export interface PredictionSelection {
   settled_at_utc: string | null;
   stake_units: number;
   profit_units: number;
+  is_starred?: boolean;
+  pre_match_stats?: PreMatchStats;
   supporting_reasons: string[];
 }
 
@@ -350,6 +370,8 @@ export interface LiveMatch {
   away_team: string;
   league: string;
   country?: string;
+  is_starred?: boolean;
+  pre_match_stats?: PreMatchStats;
   status: string;
   status_code: string;
   elapsed_minute: string;

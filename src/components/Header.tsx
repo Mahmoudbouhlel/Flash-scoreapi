@@ -82,11 +82,11 @@ export const Header: React.FC<HeaderProps> = ({
                 </h1>
                 <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                  v3.3 PRO
+                  v4.0 PRO
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Real-Time Clock Sync • Calibrated Poisson/Elo Ensemble • Daily Top 5 • Global Match Analyzer
+                Real-Time Clock Sync • Bivariate Dixon-Coles Engine • Star Matches • Daily Predictions
               </p>
             </div>
           </div>

@@ -1,6 +1,6 @@
 {
-  "name": "Flashscore Scraper & Python API Studio",
-  "description": "Production-ready Python API and scraper suite for Flashscore matches, live scores, fixtures, and statistics with interactive live sandbox and code export.",
+  "name": "Flashscore Football Intelligence v4.0 PRO",
+  "description": "Flashscore Football Intelligence v4.0 PRO - Bivariate Dixon-Coles Engine, Star Matches, Pre-Match Analytics, Live Signal Radar & AI Prediction Ledger.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

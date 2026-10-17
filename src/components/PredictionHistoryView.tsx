@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { History, ShieldCheck, Filter, TrendingUp, TrendingDown } from 'lucide-react';
+import { History, ShieldCheck, Filter, TrendingUp, TrendingDown, Search, Download, RefreshCw, CheckCircle2, XCircle, RotateCcw } from 'lucide-react';
 
 export const PredictionHistoryView: React.FC = () => {
   const [history, setHistory] = useState<any[]>([]);
   const [performance, setPerformance] = useState<any>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
-  const [engineFilter, setEngineFilter] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [isSettling, setIsSettling] = useState<boolean>(false);
 
   const fetchHistoryAndPerformance = async () => {
     setLoading(true);
@@ -40,8 +41,70 @@ export const PredictionHistoryView: React.FC = () => {
     fetchHistoryAndPerformance();
   }, []);
 
+  const handleAutoSettle = async () => {
+    setIsSettling(true);
+    try {
+      const res = await fetch('/api/v2/predictions/settle', { method: 'POST' });
+      if (res.ok) {
+        await fetchHistoryAndPerformance();
+      }
+    } catch (err) {
+      console.error('Error settling predictions:', err);
+    } finally {
+      setIsSettling(false);
+    }
+  };
+
+  const handleManualStatusUpdate = async (prediction_id: string, status: string) => {
+    try {
+      const res = await fetch('/api/v2/predictions/manual-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prediction_id, status }),
+      });
+      if (res.ok) {
+        await fetchHistoryAndPerformance();
+      }
+    } catch (err) {
+      console.error('Manual status update failed:', err);
+    }
+  };
+
+  const handleExportCSV = () => {
+    if (history.length === 0) return;
+    const headers = ['Prediction_ID', 'Date', 'Home_Team', 'Away_Team', 'League', 'Market', 'Selection', 'Odds', 'Model_Prob', 'Status', 'Profit_Units'];
+    const rows = history.map((p) => [
+      p.prediction_id,
+      p.prediction_date,
+      `"${p.home_team}"`,
+      `"${p.away_team}"`,
+      `"${p.league}"`,
+      `"${p.market}"`,
+      `"${p.selection}"`,
+      p.decimal_odds || 0,
+      p.model_probability ? (p.model_probability * 100).toFixed(1) + '%' : '0%',
+      p.status,
+      p.profit_units || 0,
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `prediction_ledger_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const filteredHistory = history.filter((p) => {
     if (statusFilter !== 'ALL' && p.status !== statusFilter) return false;
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase();
+      const matchTxt = `${p.home_team} ${p.away_team} ${p.league} ${p.selection} ${p.prediction_id}`.toLowerCase();
+      if (!matchTxt.includes(q)) return false;
+    }
     return true;
   });
 
@@ -57,6 +120,25 @@ export const PredictionHistoryView: React.FC = () => {
           <p className="text-xs text-slate-400 mt-1">
             Audited performance tracking with flat 1-unit staking rules. Empty slots and unverified picks are strictly excluded from published metrics.
           </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleAutoSettle}
+            disabled={isSettling}
+            className="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-2 transition-all cursor-pointer shadow-lg shadow-emerald-500/10 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isSettling ? 'animate-spin' : ''}`} />
+            <span>{isSettling ? 'Settling...' : 'Auto-Settle Live'}</span>
+          </button>
+
+          <button
+            onClick={handleExportCSV}
+            className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold text-xs flex items-center gap-2 transition-all cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5 text-slate-400" />
+            <span>Export CSV</span>
+          </button>
         </div>
       </div>
 
@@ -93,24 +175,37 @@ export const PredictionHistoryView: React.FC = () => {
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
-        <span className="text-xs text-slate-500 flex items-center gap-1 mr-2">
-          <Filter className="w-3.5 h-3.5" /> Filter Status:
-        </span>
-        {['ALL', 'WIN', 'LOST', 'PENDING', 'VOID', 'UNVERIFIED'].map((st) => (
-          <button
-            key={st}
-            onClick={() => setStatusFilter(st)}
-            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-              statusFilter === st
-                ? 'bg-emerald-500 text-slate-950 shadow-sm'
-                : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-            }`}
-          >
-            {st}
-          </button>
-        ))}
+      {/* Filter Tabs & Search Input */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          <span className="text-xs text-slate-500 flex items-center gap-1 mr-2">
+            <Filter className="w-3.5 h-3.5" /> Status:
+          </span>
+          {['ALL', 'WIN', 'LOST', 'PENDING', 'VOID'].map((st) => (
+            <button
+              key={st}
+              onClick={() => setStatusFilter(st)}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                statusFilter === st
+                  ? 'bg-emerald-500 text-slate-950 shadow-sm font-bold'
+                  : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+              }`}
+            >
+              {st}
+            </button>
+          ))}
+        </div>
+
+        <div className="relative w-full sm:w-64">
+          <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search teams or league..."
+            className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500/50"
+          />
+        </div>
       </div>
 
       {/* Ledger Table */}
@@ -126,20 +221,21 @@ export const PredictionHistoryView: React.FC = () => {
                 <th className="py-3 px-4">Model Prob</th>
                 <th className="py-3 px-4">Final Score</th>
                 <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4 text-center">Quick Override</th>
                 <th className="py-3 px-4 text-right">Profit (u)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 text-slate-200">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-500">
+                  <td colSpan={9} className="py-8 text-center text-slate-500">
                     Loading prediction ledger...
                   </td>
                 </tr>
               ) : filteredHistory.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-500">
-                    No predictions found matching status filter "{statusFilter}".
+                  <td colSpan={9} className="py-8 text-center text-slate-500">
+                    No predictions found matching status "{statusFilter}" {searchTerm ? `and query "${searchTerm}"` : ''}.
                   </td>
                 </tr>
               ) : (
@@ -184,6 +280,31 @@ export const PredictionHistoryView: React.FC = () => {
                         >
                           {p.status}
                         </span>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          <button
+                            onClick={() => handleManualStatusUpdate(p.prediction_id, 'WIN')}
+                            title="Mark as Win"
+                            className="p-1 rounded hover:bg-emerald-500/20 text-slate-500 hover:text-emerald-400 transition-colors cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleManualStatusUpdate(p.prediction_id, 'LOST')}
+                            title="Mark as Lost"
+                            className="p-1 rounded hover:bg-rose-500/20 text-slate-500 hover:text-rose-400 transition-colors cursor-pointer"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleManualStatusUpdate(p.prediction_id, 'PENDING')}
+                            title="Reset to Pending"
+                            className="p-1 rounded hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                       <td
                         className={`py-3 px-4 text-right font-mono font-bold ${
